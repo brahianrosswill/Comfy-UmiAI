@@ -53,6 +53,7 @@ The UmiAI node acts as the "Central Brain". You must pass your **Model** and **C
 
 > **⚠️ Setting up Resolution Control:**
 > To let the node control image size (e.g., `@@width=1024@@`), right-click your **Empty Latent Image** node and select **Convert width/height to input**, then connect the wires.
+<img width="883" height="194" alt="wvQeZXNUmL" src="https://github.com/user-attachments/assets/f6018158-297b-45a1-9593-2ce751e8cf38" />
 
 ---
 
@@ -93,6 +94,7 @@ You can use wildcards or logic to switch LoRAs per generation:
 // Randomly pick a style LoRA
 { <lora:anime_style:1.0> | <lora:realistic_v2:0.8> }
 ```
+Note that LORAs may use either their internal filename or their actual filename.
 
 ---
 
@@ -112,11 +114,42 @@ Green
 ### 2. Advanced Tag Lists (.yaml)
 Create `wildcards/styles.yaml` (You can hide LoRAs here!):
 ```yaml
-Cyberpunk:
-    Tags: <lora:neon_city:0.8>
-    Prompts: ["neon lights", "chrome", "high tech"]
+2.5 Dimensional Temptation - Noa Base:
+  Description:
+    - Noa from the series '2.5 Dimensional Temptation' without a designated outfit
+  Prompts:
+    - '<lora:ILL CHAR 2.5 Dimensional Temptation GIRLPACK - Amano Lilisa, Tachibana Mikari, Noa, Kisaki Aria, 753, Makino:1> nonoa_def, Noa, blue eyes, black hair, short hair, sailor collar'
+    - '<lora:ILL CHAR 2.5 Dimensional Temptation GIRLPACK - Amano Lilisa, Tachibana Mikari, Noa, Kisaki Aria, 753, Makino:1> nonoa_cos, Noa, blue eyes, blue hair, short hair, hair ornament'
+  Tags:
+    - 2.5 Dimensional Temptation
+    - Noa
+    - Human
+    - White Skin
+    - Lora
+    - Girl Base
+  Prefix:
+    - 
+  Suffix:
+    - 
+A-Rank Party - Silk Outfit:
+  Description:
+    - Silk from the series 'A-Rank Party' wearing her canonical outfits
+  Prompts:
+    - '<lora:ILL CHAR A-Rank Party - Silk:0.5> dark-skinned female, white hair, orange eyes, pointy ears, earrings, {swept bangs, french braid, long hair|high ponytail, swept bangs, long hair}, {SilkArcherOne, purple scarf, black jacket, long sleeves, black leotard, chest guard, red ribbon, leotard under clothes, underbust, highleg, white gloves, fur-trimmed shorts, white shorts, brown belt|SilkArcherTwo, beret, purple headwear, white ascot, cropped vest, white vest, sleeveless, elbow gloves, white gloves, vambraces, black leotard, leotard under clothes, highleg, fur-trimmed shorts, white shorts, red belt|SilkCasual, strapless, off-shoulder dress, frilled dress, purple dress, cleavage, long sleeves, light purple sleeves, pleated skirt, miniskirt, light pink skirt}'
+  Tags:
+    - A-Rank Party
+    - Silk
+    - Demihuman
+    - Dark Skin
+    - Colored Skin
+    - Lora
+    - Girl Outfit
+  Prefix:
+    - 
+  Suffix:
+    - 
 ```
-**Usage:** Type `<` to select `<[Cyberpunk]>`.
+**Usage:** Type `<` to select `<[Demihuman]>` and randomly choose a prompt between any of the YAML entries using `<[Demihumn]>` as a tag.
 
 ---
 
