@@ -27,9 +27,9 @@ UmiAI transforms static prompts into dynamic, context-aware workflows. It introd
     ```bash
     git clone [https://github.com/Tinuva88/ComfyUI-UmiAI.git](https://github.com/Tinuva88/ComfyUI-UmiAI.git)
     ```
-3.  **⚠️ IMPORTANT:** Rename the folder to `UmiAI_Wildcards` if it isn't already.
-    * ❌ `UmiAI v1.0` (Spaces break the Python import!)
-    * ✅ `UmiAI_Wildcards`
+3.  **⚠️ IMPORTANT:** Rename the folder to `ComfyUI-UmiAI` if it isn't already.
+    * ❌ `ComfyUI-UmiAI v1.0` (Spaces break the Python import!)
+    * ✅ `ComfyUI-UmiAI`
 4.  Install dependencies:
     ```bash
     pip install -r requirements.txt
