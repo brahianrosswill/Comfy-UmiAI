@@ -43,21 +43,16 @@ UmiAI transforms static prompts into dynamic, context-aware workflows. It introd
 The UmiAI node acts as the "Central Brain". You must pass your **Model** and **CLIP** through it so it can apply LoRAs automatically.
 
 ### 1. The Main Chain
-1.  Connect **Checkpoint Loader (Model & CLIP)** ➔ **UmiAI Node (Inputs)**.
-2.  Connect **UmiAI Node (Model & CLIP)** ➔ **KSampler** / **Positive Prompt**.
+* Connect **Checkpoint Loader (Model & CLIP)** &#10142; **UmiAI Node (Inputs)**.
+* Connect **UmiAI Node (Model & CLIP Outputs)** &#10142; **KSampler** or **Text Encode**.
 
-### 2. Connect Prompts
-* **Text Output** ➔ `CLIP Text Encode` (Positive)
-* **Negative Output** ➔ `CLIP Text Encode` (Negative)
+### 2. Prompts & Resolution
+* **Text Output** &#10142; `CLIP Text Encode` (Positive)
+* **Negative Output** &#10142; `CLIP Text Encode` (Negative)
+* **Width/Height** &#10142; `Empty Latent Image`
 
-### 3. Connect Resolution (Crucial!)
-To allow the node to control image size (e.g., `@@width=1024@@`):
-1.  **Right-Click** your `Empty Latent Image` node.
-2.  Select **Convert width to input** & **Convert height to input**.
-3.  Connect the **Width/Height** wires from UmiAI to the Latent node.
-
-> **⚠️ Note on Batch Size:**
-> Use the **"Queue Batch"** setting in the ComfyUI Extra Options menu to generate variations. Do not use the widget batch size.
+> **⚠️ Setting up Resolution Control:**
+> To let the node control image size (e.g., `@@width=1024@@`), right-click your **Empty Latent Image** node and select **Convert width/height to input**, then connect the wires.
 
 ---
 

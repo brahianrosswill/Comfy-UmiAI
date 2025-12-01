@@ -157,25 +157,30 @@ const HELP_STYLES = `
 const HELP_HTML = `
     <div class="umi-section">
         <h3>🔌 Setup & Wiring (The "Passthrough")</h3>
+        <p>The UmiAI node acts as the "Central Brain". You must pass your <strong>Model</strong> and <strong>CLIP</strong> through it so it can apply LoRAs automatically.</p>
+        
         <div class="umi-grid-2">
             <div class="callout callout-success" style="margin-top: 0;">
-                <h4 style="margin-top:0">Step 1: The Connections</h4>
-                <p>This node now handles LoRAs internally.</p>
+                <h4 style="margin-top:0">Step 1: The Main Chain</h4>
                 <ul class="step-list">
-                    <li>Connect <strong>Checkpoint Output (MODEL/CLIP)</strong> -> <strong>UmiAI Input</strong>.</li>
-                    <li>Connect <strong>UmiAI Output (MODEL/CLIP)</strong> -> <strong>KSampler/Text Encode</strong>.</li>
-                    <li>Connect <strong>Width/Height</strong> to Empty Latent Image.</li>
+                    <li>Connect <strong>Checkpoint Loader</strong> (Model & CLIP) &#10142; <strong>UmiAI Node</strong> (Inputs).</li>
+                    <li>Connect <strong>UmiAI Node</strong> (Model & CLIP Outputs) &#10142; <strong>KSampler</strong> or <strong>Text Encode</strong> nodes.</li>
                 </ul>
+                <p style="margin-top:10px; font-size:12px; opacity:0.8"><em>This "Passthrough" connection allows the node to inject LoRAs on the fly.</em></p>
             </div>
+            
             <div class="callout callout-info" style="margin-top: 0;">
-                <h4 style="margin-top:0">Step 2: Enabling Resolution</h4>
-                <p>To let the node control image size (e.g. <code>@@width=1024@@</code>):</p>
+                <h4 style="margin-top:0">Step 2: Prompts & Resolution</h4>
                 <ul class="step-list">
-                    <li>Right-Click your <strong>Empty Latent Image</strong> node.</li>
-                    <li>Select <strong>Convert width to input</strong>.</li>
-                    <li>Select <strong>Convert height to input</strong>.</li>
+                    <li>Connect <strong>Text/Negative</strong> outputs to your CLIP Text Encodes.</li>
+                    <li><strong>Resolution Control:</strong> Right-Click 'Empty Latent Image' &#10142; Convert width/height to input. Connect the wires.</li>
                 </ul>
             </div>
+        </div>
+        
+         <div class="callout callout-warn">
+            <strong>⚠️ Note on Batch Size:</strong><br>
+            Use the <strong>"Queue Batch"</strong> setting in the ComfyUI Extra Options menu (checkboxes on the right menu) to generate variations. Do not use the widget batch size on the Latent node, or you will get identical duplicates.
         </div>
     </div>
 
