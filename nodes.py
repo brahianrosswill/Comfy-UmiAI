@@ -663,6 +663,33 @@ class UmiAIWildcardNode:
         return text, settings
 
     def process(self, text, seed, autorefresh, width, height, danbooru_threshold=0.75, danbooru_max_tags=15, input_negative=""):
+        # ==============================================================================
+        # PRE-PROCESSING: Comment Stripping
+        # ==============================================================================
+        # We perform this first so comments don't get processed as prompts or variables.
+        # 1. Protect specific syntax that uses '#' inside tags (e.g. __#123$$wildcard__)
+        protected_text = text.replace('__#', '___UMI_HASH_PROTECT___').replace('<#', '<___UMI_HASH_PROTECT___')
+        
+        # 2. Strip C-style (//) and Shell-style (#) comments
+        clean_lines = []
+        for line in protected_text.splitlines():
+            if '//' in line:
+                line = line.split('//')[0]
+            if '#' in line:
+                line = line.split('#')[0]
+            
+            line = line.strip()
+            if line:
+                clean_lines.append(line)
+        
+        text = "\n".join(clean_lines)
+        
+        # 3. Restore protected seed-pinning syntax
+        text = text.replace('___UMI_HASH_PROTECT___', '#').replace('<___UMI_HASH_PROTECT___', '<#')
+
+        # ==============================================================================
+        # CORE PROCESSING
+        # ==============================================================================
         random.seed(seed)
         options = {'verbose': False, 'cache_files': autorefresh == "No", 'ignore_paths': True}
 

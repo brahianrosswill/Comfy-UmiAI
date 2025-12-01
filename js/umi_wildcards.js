@@ -74,7 +74,7 @@ class AutoCompletePopup {
 }
 
 // =============================================================================
-// PART 2: THE USER GUIDE (UPDATED WITH ORDER OF OPERATIONS)
+// PART 2: THE PROFESSIONAL USER GUIDE UI
 // =============================================================================
 
 const HELP_STYLES = `
@@ -82,10 +82,10 @@ const HELP_STYLES = `
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: rgba(0,0,0,0.85); z-index: 10000;
         display: flex; justify-content: center; align-items: center;
-        backdrop-filter: blur(8px); font-family: "Segoe UI", Roboto, Helvetica, sans-serif;
+        backdrop-filter: blur(8px); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     .umi-help-content {
-        background: #181818; width: 1100px; max-width: 95%; height: 90%;
+        background: #181818; width: 1000px; max-width: 95%; height: 90%;
         border-radius: 12px; box-shadow: 0 0 60px rgba(0,0,0,0.9);
         border: 1px solid #333; display: flex; flex-direction: column; overflow: hidden;
     }
@@ -93,200 +93,220 @@ const HELP_STYLES = `
         background: #202020; padding: 20px 40px; border-bottom: 1px solid #333;
         display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
     }
-    .umi-help-header h2 { margin: 0; color: #fff; font-size: 24px; font-weight: 300; letter-spacing: 1px; }
+    .umi-help-header h2 { margin: 0; color: #fff; font-size: 24px; font-weight: 600; letter-spacing: 0.5px; }
+    .umi-help-header .version { font-size: 12px; color: #666; font-weight: normal; margin-left: 10px; background: #111; padding: 2px 6px; border-radius: 4px; }
     .umi-help-close {
-        background: #a93333; color: white; border: none; padding: 8px 20px;
-        border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        background: #333; color: #ccc; border: 1px solid #444; padding: 8px 20px;
+        border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;
     }
-    .umi-help-close:hover { background: #d44; }
+    .umi-help-close:hover { background: #cc4444; color: white; border-color: #cc4444; }
     .umi-help-body {
         padding: 40px; overflow-y: auto; color: #ccc; line-height: 1.7;
         scrollbar-width: thin; scrollbar-color: #444 #181818;
     }
-    .umi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-    .umi-full { grid-column: 1 / -1; margin-bottom: 40px; }
-    h3 { color: #61afef; border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 0; font-size: 18px; }
-    h4 { color: #e5c07b; margin-bottom: 5px; margin-top: 20px; font-size: 15px; }
-    p { margin-top: 0; font-size: 14px; }
-    .umi-code { background: #111; padding: 2px 6px; border-radius: 4px; font-family: "Consolas", monospace; color: #98c379; border: 1px solid #333; font-size: 0.9em; }
-    .umi-block { background: #111; padding: 15px; border-radius: 6px; font-family: "Consolas", monospace; color: #abb2bf; border-left: 4px solid #61afef; margin: 10px 0; white-space: pre-wrap; font-size: 12px; overflow-x: auto; }
-    .umi-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
-    .umi-table th { text-align: left; border-bottom: 2px solid #444; padding: 8px; color: #fff; }
-    .umi-table td { border-bottom: 1px solid #333; padding: 8px; color: #bbb; }
-    .umi-note { background: #252518; color: #d19a66; padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid #443322; font-size: 13px; }
-    .umi-warning { background: #251818; color: #e06c75; padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid #552222; font-size: 13px; }
-    .umi-wiring { background: #1a251a; color: #98c379; padding: 20px; border-radius: 6px; border: 1px solid #2d442d; }
-    details { background: #222; border-radius: 6px; padding: 10px; margin-bottom: 10px; border: 1px solid #333; }
-    details[open] { background: #222; }
-    summary { cursor: pointer; font-weight: bold; color: #e0e0e0; outline: none; list-style: none; }
-    summary::after { content: "+"; float: right; font-weight: bold; color: #61afef; }
-    details[open] summary::after { content: "-"; }
-    details p { padding: 10px 0 0 0; color: #aaa; }
+    
+    /* Layout */
+    .umi-section { margin-bottom: 50px; }
+    .umi-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 20px; }
+    
+    /* Typography */
+    h3 { color: #61afef; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; font-size: 20px; font-weight: 600; display: flex; align-items: center; }
+    h4 { color: #e5c07b; margin-bottom: 8px; margin-top: 20px; font-size: 15px; font-weight: 600; }
+    p { margin-top: 0; font-size: 14px; color: #abb2bf; }
+    
+    /* Components */
+    .umi-code {
+        background: #282c34; padding: 2px 6px; border-radius: 4px; 
+        font-family: "Consolas", "Monaco", monospace; color: #98c379; border: 1px solid #3e4451; font-size: 0.9em;
+    }
+    .umi-block {
+        background: #282c34; padding: 15px; border-radius: 6px; 
+        font-family: "Consolas", "Monaco", monospace; color: #abb2bf; border-left: 4px solid #61afef;
+        margin: 10px 0; white-space: pre-wrap; font-size: 12px; overflow-x: auto;
+    }
+    .umi-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; border: 1px solid #333; }
+    .umi-table th { text-align: left; background: #252525; border-bottom: 1px solid #444; padding: 10px; color: #fff; }
+    .umi-table td { border-bottom: 1px solid #333; padding: 10px; color: #bbb; background: #1e1e1e; }
+    .umi-table tr:last-child td { border-bottom: none; }
+    
+    /* Callouts */
+    .callout { padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 13px; border-left: 4px solid; }
+    .callout-info { background: #1c242c; border-color: #61afef; color: #d1d9e6; }
+    .callout-warn { background: #2c2222; border-color: #e06c75; color: #e6d1d1; }
+    .callout-success { background: #1e2620; border-color: #98c379; color: #d1e6d6; }
+    
+    /* Wiring Diagram Style */
+    .step-list { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+    .step-list li { position: relative; padding-left: 30px; margin-bottom: 10px; font-size: 14px; }
+    .step-list li::before { 
+        counter-increment: step; content: counter(step); 
+        position: absolute; left: 0; top: 0; width: 20px; height: 20px; 
+        background: #333; color: #fff; border-radius: 50%; 
+        text-align: center; line-height: 20px; font-size: 11px; font-weight: bold;
+    }
+
+    /* Details/Summary */
+    details { background: #21252b; border-radius: 6px; padding: 10px; margin-bottom: 10px; border: 1px solid #333; transition: 0.2s; }
+    details[open] { background: #282c34; border-color: #444; }
+    summary { cursor: pointer; font-weight: 600; color: #e0e0e0; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    summary::after { content: "+"; color: #61afef; font-weight: bold; font-size: 16px; }
+    details[open] summary::after { content: "−"; }
+    details[open] summary { margin-bottom: 15px; border-bottom: 1px solid #3e4451; padding-bottom: 10px; }
 `;
 
 const HELP_HTML = `
-    <div class="umi-full">
-        <h3>🔌 Wiring & Installation (Read First)</h3>
-        <div class="umi-wiring">
-            <p><strong>1. Basic Connections:</strong> Connect <code>text</code> output to CLIP Positive, and <code>negative_text</code> output to CLIP Negative.</p>
-            <div style="height: 10px;"></div>
-            <p><strong>2. Resolution Control (Crucial):</strong> To let this node control image size (e.g. <code>@@width=1024@@</code>), you must enable inputs on your Latent node:</p>
-            <ul style="margin: 5px 0 0 0; font-size: 13px;">
-                <li>Right-Click your <strong>Empty Latent Image</strong> node.</li>
-                <li>Select <strong>Convert width to input</strong> and <strong>Convert height to input</strong>.</li>
-                <li>Connect the UmiAI <code>width</code> and <code>height</code> outputs to these new inputs.</li>
-            </ul>
+    <div class="umi-section">
+        <h3>🔌 Setup & Wiring</h3>
+        <div class="umi-grid-2">
+            <div class="callout callout-success" style="margin-top: 0;">
+                <h4 style="margin-top:0">Step 1: The Connections</h4>
+                <p>The UmiAI node acts as the "Brain" of your workflow.</p>
+                <ul class="step-list">
+                    <li>Connect <strong>Text Output</strong> to Positive CLIP.</li>
+                    <li>Connect <strong>Negative Output</strong> to Negative CLIP.</li>
+                    <li>Connect <strong>Width/Height</strong> to Empty Latent Image.</li>
+                </ul>
+            </div>
+            <div class="callout callout-info" style="margin-top: 0;">
+                <h4 style="margin-top:0">Step 2: Enabling Resolution</h4>
+                <p>To let the node control image size (e.g. <code>@@width=1024@@</code>):</p>
+                <ul class="step-list">
+                    <li>Right-Click your <strong>Empty Latent Image</strong> node.</li>
+                    <li>Select <strong>Convert width to input</strong>.</li>
+                    <li>Select <strong>Convert height to input</strong>.</li>
+                </ul>
+            </div>
         </div>
-        
-        <div class="umi-warning">
-            <strong>⚠️ IMPORTANT: Batch Size vs. Queue</strong><br>
+        <div class="callout callout-warn">
+            <strong>⚠️ CRITICAL: Batch Size vs. Queue Batch</strong><br>
             If you set "Batch Size" to 4 on your Empty Latent node, you will get 4 <strong>identical</strong> images.
-            To generate 4 <strong>different</strong> variations (or cycle through Sequential logic), leave Batch Size at 1 and use the <strong>"Queue Batch"</strong> setting in the ComfyUI menu instead.
+            To generate variations (or use Sequential logic), leave Batch Size at 1 and use the <strong>"Queue Batch"</strong> setting in the ComfyUI menu instead.
         </div>
     </div>
 
-    <div class="umi-full">
-        <h3>🎨 6. Danbooru Character Expander</h3>
-        <p>Automatically fetch visual descriptions (hair color, outfit, eyes) from Danbooru for specific characters.</p>
+    <div class="umi-section">
+        <h3>⚡ Syntax Cheat Sheet</h3>
+        <div class="umi-grid-2">
+            <div>
+                <h4 style="margin-top:0">🎲 Dynamic Prompts</h4>
+                <table class="umi-table">
+                    <tr><td><span class="umi-code">{a|b}</span></td><td>Random choice.</td></tr>
+                    <tr><td><span class="umi-code">{2$$a|b|c}</span></td><td>Pick 2 unique.</td></tr>
+                    <tr><td><span class="umi-code">{1-3$$a|b|c}</span></td><td>Pick 1 to 3.</td></tr>
+                    <tr><td><span class="umi-code">{50%a|b}</span></td><td>50% chance 'a', else 'b'.</td></tr>
+                    <tr><td><span class="umi-code">{~a|b|c}</span></td><td><strong>Sequential:</strong> Cycles by Seed.</td></tr>
+                </table>
+            </div>
+            <div>
+                <h4 style="margin-top:0">🎛️ Tools & Logic</h4>
+                <table class="umi-table">
+                    <tr><td><span class="umi-code">$var={...}</span></td><td>Define variable.</td></tr>
+                    <tr><td><span class="umi-code">[if K: A | B]</span></td><td>Logic Gate.</td></tr>
+                    <tr><td><span class="umi-code">char:name</span></td><td>Danbooru Fetcher.</td></tr>
+                    <tr><td><span class="umi-code">@@w=1024@@</span></td><td>Set Resolution.</td></tr>
+                    <tr><td><span class="umi-code">**text**</span></td><td>Move to Negative.</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="umi-section">
+        <h3>📂 Creating & Using Wildcards</h3>
+        <p>You can create your own lists in the <code>wildcards/</code> folder and use them in ComfyUI.</p>
         
-        <div class="umi-block">// Syntax
-char:character_name
-// OR
-&lt;char:character_name&gt;
+        <div class="umi-grid-2">
+            <div>
+                <h4>1. Simple Text Lists (.txt)</h4>
+                <p>Create a file named <code>wildcards/colors.txt</code>:</p>
+                <div class="umi-block">Red
+Blue
+Green</div>
+                <p><strong>Usage:</strong> Type <code>__</code> to trigger autocomplete.</p>
+                <div class="umi-block">A beautiful __colors__ dress.</div>
+            </div>
+            
+            <div>
+                <h4>2. Advanced Tag Lists (.yaml)</h4>
+                <p>Create a file named <code>wildcards/styles.yaml</code>:</p>
+                <div class="umi-block">Crimson Fire:
+  Prompts:
+    - "crimson red, blazing fire texture"
+    - "deep ruby red, glowing embers"
+  Tags:
+    - color
+    - red</div>
+                <p><strong>Usage:</strong> Type <code>&lt;</code> to trigger autocomplete.</p>
+                <div class="umi-block">&lt;[red]&gt; background.</div>
+            </div>
+        </div>
 
-// Example
-(Masterpiece), A photo of char:frieren.</div>
-
-        <div class="umi-note">
-            <strong>⚙️ Usage Tips:</strong>
-            <ul style="margin: 5px 0 0 0; padding-left: 20px;">
-                <li><strong>Threshold (Slider):</strong> Controls how common a tag must be to appear. 
-                    <br> - <strong>High (0.8+):</strong> Only core features (e.g., hair color).
-                    <br> - <strong>Low (0.2-0.4):</strong> Includes outfits and minor details. If a character looks "generic", <strong>lower this value!</strong>
-                </li>
-                <li><strong>AutoRefresh:</strong> Set to "Yes" to force a fresh fetch from Danbooru (bypassing the cache).</li>
-                <li><strong>All Ratings:</strong> The node scans ALL images (Safe, Questionable, Explicit) to ensure accurate tags for all characters.</li>
-            </ul>
+        <div class="callout callout-success">
+            <strong>✨ Pro Tip: Autocomplete</strong><br>
+            • Type <code>__</code> (double underscore) to see all your <strong>Files</strong>.<br>
+            • Type <code>&lt;</code> (less than) to see all your <strong>YAML Tags</strong>.
         </div>
     </div>
 
-    <div class="umi-grid">
-        <div>
-            <h3>🎲 1. Randomization & Probability</h3>
-            <table class="umi-table">
-                <tr><th>Syntax</th><th>Function</th></tr>
-                <tr><td><span class="umi-code">{a|b}</span></td><td>Standard choice.</td></tr>
-                <tr><td><span class="umi-code">{2$$a|b|c}</span></td><td>Pick exactly 2 unique items.</td></tr>
-                <tr><td><span class="umi-code">{1-3$$a|b|c}</span></td><td>Pick 1 to 3 items randomly.</td></tr>
-                <tr><td><span class="umi-code">{50%a|b}</span></td><td>50% chance of 'a', else 'b'.</td></tr>
-                <tr><td><span class="umi-code">{30%a}</span></td><td>30% chance of 'a', else nothing.</td></tr>
-                <tr><td><span class="umi-code">{~a|b|c}</span></td><td><strong>Sequential:</strong> Cycles 1 by 1 based on Seed.</td></tr>
-            </table>
-
-            <details>
-                <summary>💡 Examples & Tips (Weighted Choices)</summary>
-                <p><strong>Method A (Repetition):</strong><br>
-                To make 'Gold' appear more often than 'Silver', simply repeat it:<br>
-                <code>{Gold|Gold|Gold|Silver}</code> (75% Gold).</p>
-                
-                <p><strong>Method B (Percentage):</strong><br>
-                For cleaner code, use the percentage syntax:<br>
-                <code>{75%Gold|Silver}</code></p>
-                
-                <p><strong>The "Chaos" Generator:</strong><br>
-                Pick a random amount of modifiers:<br>
-                <code>{0-5$$fire|ice|wind|earth|void|light}</code></p>
-            </details>
-        </div>
-
-        <div>
-            <h3>📂 2. Wildcards (Files)</h3>
-            <p>Load data from <code>/wildcards</code> folder. Supports txt and yaml.</p>
-            <table class="umi-table">
-                <tr><th>Syntax</th><th>Function</th></tr>
-                <tr><td><span class="umi-code">__file__</span></td><td>Random line from file.txt</td></tr>
-                <tr><td><span class="umi-code">&lt;[tag]&gt;</span></td><td>YAML item containing this tag.</td></tr>
-                <tr><td><span class="umi-code">&lt;[t1][t2]&gt;</span></td><td>AND: Must have both tags.</td></tr>
-                <tr><td><span class="umi-code">&lt;[t1|t2]&gt;</span></td><td>OR: Can have either tag.</td></tr>
-                <tr><td><span class="umi-code">&lt;[--t1]&gt;</span></td><td>NOT: Must NOT have tag.</td></tr>
-            </table>
-
-            <details>
-                <summary>💡 The Autocomplete System</summary>
-                <p><strong>Files:</strong> Type <code>__</code> in the box to see a dropdown of all text files.</p>
-                <p><strong>Tags:</strong> Type <code>&lt;</code> in the box to see a dropdown of all tags found inside your YAML files.</p>
-                <p><strong>Deep Paths:</strong> You can use subfolders. <code>__styles/anime/90s__</code> works perfectly.</p>
-            </details>
-        </div>
-    </div>
-
-    <div class="umi-full">
-        <h3>💾 3. Variables & Filters</h3>
-        <p>Define a choice once, store it, and reuse it. Use dot notation to filter the output.</p>
+    <div class="umi-section">
+        <h3>💾 Variables & Persistence</h3>
+        <p>Define a choice once, store it, and reuse it. This ensures character consistency across a prompt.</p>
         
-        <div class="umi-block">// 1. Assignment
-$location={Neon_City|Dark_Alley}
+        <div class="umi-block">// 1. Assignment (Hidden from final output)
+$hair={Blonde|Red|Neon Pink}
 
-// 2. Usage with Filters
-A photo of $location.clean.upper.
-// Output: "A photo of NEON CITY."</div>
+// 2. Usage (Replaces with the stored value)
+A photo of a woman with $hair hair. The wind blows her $hair hair.</div>
 
+        <div class="callout callout-info">
+            <strong>✨ String Filters:</strong> Modify the variable output using dot notation.<br>
+            <code>$var.clean</code> (Remove underscores) • <code>$var.upper</code> (UPPERCASE) • <code>$var.title</code> (Capitalize)
+        </div>
+
+        <br>
+        <h4 style="margin-top:0">🌍 Global Presets</h4>
+        <p>Variables defined in <code>wildcards/globals.yaml</code> are available in <strong>every</strong> prompt automatically.</p>
+        <div class="umi-block">// In globals.yaml
+quality: "masterpiece, best quality, 8k"
+
+// In ComfyUI
+$quality, A photo of a cat.</div>
+    </div>
+
+    <div class="umi-section">
+        <h3>🔀 Conditional Logic</h3>
+        <p>Inject text only if a specific keyword exists in the resolved prompt.</p>
+        
+        <div class="umi-block">// Syntax: [if Keyword : True Text | False Text]
+
+$class={Knight|Cyberpunk}
+
+[if Knight : holding a sword | holding a laser gun]</div>
+
+        <div class="callout callout-warn">
+            <strong>⚠️ ORDER OF OPERATIONS (CRITICAL)</strong><br>
+            Logic runs <strong>AFTER</strong> variables are resolved. It scans the final text.<br>
+            If you use <code>$var.clean</code>, your variable <code>Neon_City</code> becomes <code>Neon City</code>.<br>
+            Your Logic check must match the output: <code>[if Neon City : ...]</code> (Space, not underscore).
+        </div>
+    </div>
+
+    <div class="umi-section">
+        <h3>🎨 Danbooru Character Expander</h3>
+        <p>Type <code>char:character_name</code> to automatically fetch visual tags (hair, eyes, outfit) from Danbooru.</p>
+        
         <table class="umi-table">
-            <tr><th>Filter</th><th>Description</th></tr>
-            <tr><td><span class="umi-code">.clean</span></td><td>Replaces <code>_</code> and <code>-</code> with spaces.</td></tr>
-            <tr><td><span class="umi-code">.upper</span></td><td>CONVERTS TO ALL CAPS.</td></tr>
-            <tr><td><span class="umi-code">.title</span></td><td>Capitalizes First Letters.</td></tr>
+            <tr><th>Setting</th><th>Description</th></tr>
+            <tr><td><strong>Threshold</strong></td><td>Strictness. High (0.8) = Core features only. Low (0.3) = Outfits/Details.</td></tr>
+            <tr><td><strong>AutoRefresh</strong></td><td>Set to "Yes" to force a re-fetch from the API (bypassing cache).</td></tr>
         </table>
     </div>
 
-    <div class="umi-grid">
-        <div>
-            <h3>🔀 4. Conditional Logic</h3>
-            <p>Inject text only if a keyword exists in the resolved prompt.</p>
-            <div class="umi-block">[if Keyword : True Text | False Text]</div>
-            
-            <div class="umi-warning">
-                <strong>⚠️ ORDER OF OPERATIONS (CRITICAL)</strong><br>
-                Variables are replaced <strong>BEFORE</strong> Logic runs. Logic scans the final text.<br><br>
-                
-                <strong>Example:</strong> <code>$loc={Neon_City}</code><br>
-                If prompt is: <code>$loc.clean</code> (Output: "Neon City")<br>
-                
-                ❌ <code>[if Neon_City: ...]</code> will FAIL (underscore gone).<br>
-                ✅ <code>[if Neon City: ...]</code> will WORK.
-            </div>
-
-            <details>
-                <summary>💡 Pro Tip: The "Hidden State" Trick</summary>
-                <p>If you want to use Filters like <code>.clean</code> but keep your Logic simple (checking for underscores), hide the raw variable in the Negative Prompt!</p>
-                <div class="umi-block">$loc={Neon_City}
-A photo of $loc.clean.
-[if Neon_City: Cyberpunk] 
-**$loc**</div>
-                <p>The logic finds <code>$loc</code> (Neon_City) in the negatives before it gets stripped out!</p>
-            </details>
-        </div>
-
-        <div>
-            <h3>⚙️ 5. Settings & Utility</h3>
-            <p>Control the workflow from the text box.</p>
-            
-            <h4>Resolution Override</h4>
-            <div class="umi-block">@@width=1024, height=1536@@</div>
-            <p>Sets the width/height outputs. Can be placed inside conditionals to change size per-subject.</p>
-
-            <h4>Inline Negatives</h4>
-            <div class="umi-block">A pretty landscape **watermark, text**</div>
-            <p>Removes text between <code>**</code> and sends it to the Negative Output.</p>
-        </div>
-    </div>
-
-    <div class="umi-full">
-        <h3>🚀 Advanced Usage Examples</h3>
-        <p>Copy-paste these blocks to test advanced functionality.</p>
+    <div class="umi-section" style="margin-bottom: 0;">
+        <h3>🚀 Production Workflows</h3>
+        <p>Copy-paste these blocks to test the full power of the node.</p>
         
         <details>
-            <summary>🧪 1. Context-Aware Character (Variables + Logic)</summary>
+            <summary>🧪 The "Context-Aware" Character</summary>
             <div class="umi-block">$genre={High Fantasy|Cyberpunk|Post-Apocalyptic}
 $view={~Portrait|Landscape}
 
@@ -302,18 +322,14 @@ The background is a $genre landscape.
         </details>
 
         <details>
-            <summary>📸 2. The "Ultimate Portrait Studio" (Camera Logic)</summary>
+            <summary>📸 The "Virtual Photographer" (Camera Logic)</summary>
             <div class="umi-block">$theme={Cyberpunk|High Fantasy|Modern Editorial}
-$subject_gender={female|male}
 
-// Resolution & Camera Logic
-[if Cyberpunk: @@width=896, height=1152@@ (Shot on Phase One XF IQ4:1.2), 150MP, razor sharp focus, digital sensor]
+// Camera Logic based on Theme
+[if Cyberpunk: @@width=896, height=1152@@ (Shot on Phase One XF IQ4:1.2), 150MP, razor sharp, digital sensor]
 [if High Fantasy: @@width=1024, height=1280@@ (Shot on Kodak Portra 400:1.2), 35mm film grain, analog aesthetic]
-[if Modern Editorial: @@width=1024, height=1024@@ (Shot on Canon EOS R5:1.2), 85mm portrait lens, f/1.8, bokeh]
 
-(Masterpiece, best quality, 8k), A breathtaking portrait of a $theme $subject_gender.
-Wearing [if Cyberpunk: holographic jacket][if Fantasy: elven armor][if Modern: haute couture].
-
+(Masterpiece, best quality, 8k), A breathtaking portrait of a $theme character.
 **cartoon, anime, 3d render, watermark**</div>
         </details>
     </div>
@@ -334,7 +350,9 @@ function showHelpModal() {
     modal.innerHTML = `
         <div class="umi-help-content">
             <div class="umi-help-header">
-                <h2>📘 UmiAI Reference Manual</h2>
+                <div>
+                    <h2>📘 UmiAI Reference Manual <span class="version">v1.0</span></h2>
+                </div>
                 <button class="umi-help-close" onclick="this.closest('.umi-help-modal').remove()">CLOSE</button>
             </div>
             <div class="umi-help-body">

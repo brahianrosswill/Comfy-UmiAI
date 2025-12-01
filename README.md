@@ -1,5 +1,7 @@
 # 📘 UmiAI Wildcard Processor
 
+[![Join Discord](https://img.shields.io/badge/Discord-Join%20Umi%20AI-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/9K7j7DTfG2)
+
 **A "Logic Engine" for ComfyUI Prompts.**
 
 UmiAI transforms static prompts into dynamic, context-aware workflows. It introduces **Persistent Variables**, **Conditional Logic**, **Sequential Cycles**, and **External Data Fetching** (Danbooru) directly into your prompt text box.
@@ -7,9 +9,11 @@ UmiAI transforms static prompts into dynamic, context-aware workflows. It introd
 ## ✨ Key Features
 
 * **🧠 Persistent Variables:** Define a choice once (`$hair={Red|Blue}`) and reuse it (`$hair`) anywhere to ensure consistency across complex prompts.
+* **🌍 Global Presets:** Automatically load variables from `wildcards/globals.yaml` (e.g., `$quality`, `$negatives`) into *every* prompt without typing them.
 * **🔀 Conditional Logic:** `[if keyword : True Text | False Text]` logic gates. Perfect for ensuring your character's outfit matches the background genre automatically.
 * **🎨 Danbooru Integration:** Type `char:name` to automatically fetch visual appearance tags (eyes, hair, outfit) from Danbooru.
 * **🔁 Sequential Cycles:** `{~A|B|C}` cycles through options deterministically based on the seed. Essential for XY Plots and Grid comparisons.
+* **📝 Comments:** Use `//` or `#` to add notes to your prompts (stripped at runtime).
 * **⌨️ Autocomplete:** Built-in popup for Files (`__`) and Tags (`<`) directly in the text box.
 * **📏 Resolution Control:** Set `@@width=1024@@` inside your prompt to control image size contextually.
 
@@ -59,17 +63,53 @@ To allow the node to control image size (e.g., `@@width=1024@@`), you must conne
 
 ---
 
-## ⚡ Quick Syntax Cheat Sheet
+## ⚡ Syntax Cheat Sheet
 
 | Feature | Syntax | Example |
 | :--- | :--- | :--- |
 | **Random Choice** | `{a|b|c}` | `{Red|Blue|Green}` |
-| **Variables** | `$var={opts}` | `$hair={Red|Blue}` ... `$hair` |
-| **String Filters** | `$var.filter` | `$var.clean` / `$var.upper` |
+| **Variables** | `$var={opts}` | `$hair={Red|Blue}` |
+| **Use Variable** | `$var` | `A photo of $hair hair.` |
+| **String Filters** | `$var.filter` | `$var.clean` / `$var.upper` / `$var.title` |
 | **Logic Gate** | `[if Key : A | B]` | `[if Cyberpunk : Techwear | Armor]` |
 | **Danbooru** | `char:name` | `char:frieren` |
 | **Sequential** | `{~a|b|c}` | `{~Front|Side|Back}` |
 | **Set Size** | `@@w=X, h=Y@@` | `@@width=1024, height=1536@@` |
+| **Negatives** | `**text**` | `A landscape **text, watermark**` |
+| **Comments** | `//` or `#` | `// This is a comment` |
+
+---
+
+## 📂 Creating Wildcards
+
+UmiAI reads files from the `wildcards/` folder.
+
+### 1. Simple Text Lists (.txt)
+Create a file named `wildcards/colors.txt`:
+```text
+Red
+Blue
+Green
+```
+**Usage:** Type `__` in ComfyUI to select `__colors__`.
+
+### 2. Advanced Tag Lists (.yaml)
+Create a file named `wildcards/styles.yaml`:
+```yaml
+Cyberpunk:
+    Tags: [scifi, neon]
+    Prompts: ["neon lights", "chrome", "high tech"]
+```
+**Usage:** Type `<` in ComfyUI to select `<[scifi]>`.
+
+### 3. Global Presets (globals.yaml)
+Variables defined here are available in **every** prompt automatically.
+Create `wildcards/globals.yaml`:
+```yaml
+quality: "masterpiece, best quality, 8k, highly detailed"
+negatives: "bad hands, text, watermark, nsfw"
+```
+**Usage:** Just type `$quality` or `**$negatives**` in any prompt.
 
 ---
 
@@ -78,15 +118,39 @@ To allow the node to control image size (e.g., `@@width=1024@@`), you must conne
 Copy this prompt into the node to test the full logic capabilities. It auto-selects a genre, then ensures the **Outfit**, **Weapon**, and **Resolution** all match that genre.
 
 ```text
+// 1. Define Variables
 $genre={High Fantasy|Cyberpunk|Post-Apocalyptic}
 $view={~Portrait|Landscape}
 
-// Logic: Set resolution based on View
+// 2. Logic: Set resolution based on View
 [if Portrait: @@width=1024, height=1536@@][if Landscape: @@width=1536, height=1024@@]
 
+// 3. Main Prompt
 (Masterpiece), A $view of a warrior, female.
-She is wearing [if Fantasy: plate armor][if Cyberpunk: tech jacket][if Post-Apocalyptic: rags].
+
+// 4. Context Logic (If genre matches, pick specific outfit)
+She is wearing [if Fantasy: plate armor | [if Cyberpunk: tech jacket | rags]].
 She is holding [if Fantasy: a sword | [if Cyberpunk: a pistol | a crowbar]].
 
 The background is a $genre landscape.
+
+// 5. Inline Negatives
 **watermark, text, blurry, nsfw**
+```
+
+---
+
+## 💬 Community & Support
+
+Join the **Umi AI** Discord server to share workflows, get help, and discuss new features!
+
+👉 **[Join our Discord Server](https://discord.gg/9K7j7DTfG2)**
+
+---
+
+## ❓ Troubleshooting
+
+**The "User Guide" menu option isn't showing up!**
+1.  **Browser Cache:** Press `CTRL+F5` (Windows) or `Cmd+Shift+R` (Mac) to hard refresh ComfyUI.
+2.  **Folder Name:** Ensure your installation folder does **not** have spaces or dots (e.g., `UmiAI v1.0`). It must be a valid Python module name like `UmiAI_Wildcards`.
+3.  **Console Check:** Press F12 -> Console. If you see red errors, ensure you installed `requests` and `pyyaml`.
