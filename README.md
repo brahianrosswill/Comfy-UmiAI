@@ -66,7 +66,7 @@ The UmiAI node acts as the "Central Brain". You must pass your **Model** and **C
 | **Random Weights** | `{#%a\|#%b\|#%c}` | `{25%Red\|15%Blue\|60%Green}` | `{75%Girl\|115%Boy\|35%Nonbinary}` |
 | **Choose X of Y** | `{x-y$$a\|b\|c}` | `{0-2$$Hat\|Scarf\|Belt}` | `{1-3$$Swimming\|Flying\|Jumping}` |
 | **Variables** | `$var={opts}` | `$hair={Red\|Blue\|Green}` | `$char1={Tifa\|Aerith\|Zelda}` |
-| **Use Variable** | `$var` | `A photo of $hair hair.` | `$char1 hugging $char2` |
+| **Use Variable** | `$var` | `A woman with $color1 hair.` | `$char1 hugging $char2` |
 | **Danbooru** | `char:name` | `char:zelda` | `char:tifa_lockhart` |
 | **Sequential** | `{~a\|b\|c}` | `{~Front\|Side\|Back}` | `{~Seed1\|Seed2\|Seed3}` |
 | **Logic Gate** | `[if Key : A \| B]` | `[if Cyberpunk : Techwear \| Armor]` |  |
