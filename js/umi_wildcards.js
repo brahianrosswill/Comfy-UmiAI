@@ -203,7 +203,7 @@ const HELP_HTML = `
                     <tr><td><span class="umi-code">$var={...}</span></td><td>Define variable.</td></tr>
                     <tr><td><span class="umi-code">[if K : A | B]</span></td><td>Logic Gate.</td></tr>
                     <tr><td><span class="umi-code">&lt;lora:name:1.0&gt;</span></td><td>Load LoRA (Auto).</td></tr>
-                    <tr><td><span class="umi-code">@@w=1024@@</span></td><td>Set Resolution.</td></tr>
+                    <tr><td><span class="umi-code">@@width=768, height=768@@</span></td><td>Set Resolution.</td></tr>
                     <tr><td><span class="umi-code">**text**</span></td><td>Move to Negative.</td></tr>
                 </table>
             </div>
@@ -225,6 +225,21 @@ const HELP_HTML = `
 // Inside logic or variables!
 $style={ &lt;lora:anime:1.0&gt; | &lt;lora:realistic:0.8&gt; }
 A photo of a cat, $style</div>
+
+        <div class="callout callout-info">
+            <h4 style="margin-top:0">🔍 New: LoRA Tag Inspector & Injector</h4>
+            <p>Don't know the trigger words for your LoRA? The node can now read the .safetensors metadata.</p>
+            <div class="umi-grid-2" style="margin-bottom:0; gap:15px; margin-top:10px;">
+                <div style="background: #151515; padding: 10px; border-radius: 6px;">
+                    <strong>👁️ See the Tags</strong><br>
+                    <span style="font-size:12px; color:#888;">Connect the new <strong>lora_info</strong> output string to a "Show Text" or "Preview Text" node. It will list every loaded LoRA and their top training tags.</span>
+                </div>
+                <div style="background: #151515; padding: 10px; border-radius: 6px;">
+                    <strong>💉 Auto-Inject</strong><br>
+                    <span style="font-size:12px; color:#888;">Use the <strong>lora_tags_behavior</strong> widget to automatically <em>Append</em> or <em>Prepend</em> the most common training tags to your prompt.</span>
+                </div>
+            </div>
+        </div>
 
         <div class="callout callout-success">
             <strong>✨ Auto-Detection (Standard & Z-Image):</strong><br>

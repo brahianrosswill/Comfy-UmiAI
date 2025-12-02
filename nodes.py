@@ -10,6 +10,7 @@ import folder_paths
 import comfy.sd
 import comfy.utils
 import torch # Required for Z-Image Matrix Math
+from safetensors import safe_open # Required for LoRA Metadata
 
 # ==============================================================================
 # HELPER FUNCTIONS
@@ -617,6 +618,11 @@ class LoRAHandler:
     def __init__(self):
         # Syntax: <lora:LoraName:Strength> or <lora:LoraName> (defaults to 1.0)
         self.regex = re.compile(r'<lora:([^>:]+)(?::([0-9.]+))?>', re.IGNORECASE)
+        self.blacklist = {
+            "1girl", "1boy", "solo", "monochrome", "greyscale", "comic", "scenery",
+            "translated", "commentary_request", "highres", "absurdres", "masterpiece",
+            "best quality", "simple background", "white background", "transparent background"
+        }
 
     def patch_zimage_lora(self, lora):
         """ Applies QKV fusion and key remapping for Z-Image LoRAs """
@@ -685,12 +691,49 @@ class LoRAHandler:
 
         return new_lora
 
-    def extract_and_load(self, text, model, clip):
+    def get_lora_tags(self, lora_path, max_tags=10):
+        """ Reads safetensors metadata to find training tags """
+        try:
+            with safe_open(lora_path, framework="pt", device="cpu") as f:
+                metadata = f.metadata()
+            
+            if not metadata: return None
+            
+            # Check for Kohya-ss format (ss_tag_frequency)
+            if "ss_tag_frequency" in metadata:
+                try:
+                    freqs = json.loads(metadata["ss_tag_frequency"])
+                    merged = Counter()
+                    # freqs is a dict where key is directory path (e.g. "10_character"), value is dict of tags
+                    for dir_freq in freqs.values():
+                        merged.update(dir_freq)
+                    
+                    # Filter bad tags
+                    filtered_tags = []
+                    for t, c in merged.most_common():
+                        clean_t = t.strip()
+                        if clean_t in self.blacklist: continue
+                        if " " in clean_t and clean_t.replace(" ", "_") in self.blacklist: continue
+                        filtered_tags.append(clean_t)
+                        if len(filtered_tags) >= max_tags: break
+                    
+                    return filtered_tags
+                except Exception as e:
+                    pass
+
+            return None
+        except Exception as e:
+            return None
+
+    def extract_and_load(self, text, model, clip, behavior):
         matches = self.regex.findall(text)
         clean_text = self.regex.sub("", text)
+        lora_info_output = []
+        
+        extracted_tags_str = ""
 
         if model is None or clip is None:
-            return clean_text, model, clip
+            return clean_text, model, clip, ""
 
         for match in matches:
             name = match[0].strip()
@@ -701,23 +744,44 @@ class LoRAHandler:
                 lora_path = folder_paths.get_full_path("loras", f"{name}.safetensors")
             
             if lora_path:
+                # Extract Tags
+                tags = self.get_lora_tags(lora_path)
+                
+                # Handle Info Output
+                info_block = f"[LORA: {name}]\n"
+                if tags:
+                    info_block += f"Common Tags: {', '.join(tags)}"
+                else:
+                    info_block += "Common Tags: (No Metadata Found)"
+                lora_info_output.append(info_block)
+
+                # Handle Prompt Injection
+                if behavior == "Append to Prompt" and tags:
+                     extracted_tags_str += ", " + ", ".join(tags)
+                elif behavior == "Prepend to Prompt" and tags:
+                     extracted_tags_str = ", ".join(tags) + ", " + extracted_tags_str
+
+                # Load LoRA
                 try:
                     lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                    
-                    # AUTO-DETECT Z-IMAGE Format
-                    # Heuristic: Check for 'to_q' keys which implies separate QKV
                     is_zimage = any(".attention.to_q." in k for k in lora.keys())
-                    
                     if is_zimage:
                         lora = self.patch_zimage_lora(lora)
-                    
                     model, clip = comfy.sd.load_lora_for_models(model, clip, lora, strength, strength)
                 except Exception as e:
                     print(f"[UmiAI] Failed to load LoRA {name}: {e}")
+                    lora_info_output.append(f"Error loading: {e}")
             else:
                  print(f"[UmiAI] LoRA not found: {name}")
+                 lora_info_output.append(f"[LORA: {name}] - NOT FOUND")
+        
+        # Apply the tag injection to the text
+        if behavior == "Append to Prompt":
+            clean_text = clean_text + extracted_tags_str
+        elif behavior == "Prepend to Prompt":
+            clean_text = extracted_tags_str + ", " + clean_text
 
-        return clean_text, model, clip
+        return clean_text, model, clip, "\n\n".join(lora_info_output)
 
 class NegativePromptGenerator:
     def __init__(self):
@@ -758,6 +822,7 @@ class UmiAIWildcardNode:
             "optional": {
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
+                "lora_tags_behavior": (["Disabled", "Append to Prompt", "Prepend to Prompt"],),
                 "input_negative": ("STRING", {"multiline": True, "forceInput": True}),
                 "width": ("INT", {"default": 1024, "min": 64, "max": 8192}),
                 "height": ("INT", {"default": 1024, "min": 64, "max": 8192}),
@@ -766,8 +831,8 @@ class UmiAIWildcardNode:
             }
         }
 
-    RETURN_TYPES = ("MODEL", "CLIP", "STRING", "STRING", "INT", "INT")
-    RETURN_NAMES = ("model", "clip", "text", "negative_text", "width", "height")
+    RETURN_TYPES = ("MODEL", "CLIP", "STRING", "STRING", "INT", "INT", "STRING")
+    RETURN_NAMES = ("model", "clip", "text", "negative_text", "width", "height", "lora_info")
     FUNCTION = "process"
     CATEGORY = "UmiAI"
     
@@ -793,7 +858,7 @@ class UmiAIWildcardNode:
                         pass
         return text, settings
 
-    def process(self, text, seed, autorefresh, width, height, model=None, clip=None, danbooru_threshold=0.75, danbooru_max_tags=15, input_negative=""):
+    def process(self, text, seed, autorefresh, width, height, model=None, clip=None, lora_tags_behavior="Disabled", danbooru_threshold=0.75, danbooru_max_tags=15, input_negative=""):
         # ==============================================================================
         # PRE-PROCESSING: Comment Stripping
         # ==============================================================================
@@ -851,9 +916,9 @@ class UmiAIWildcardNode:
         # Phase 2: Logic & Cleanup
         prompt = conditional_replacer.replace(prompt)
         
-        # Phase 3: LoRA Internal Loading
-        # We pass the model/clip in, and get the modified versions back
-        prompt, final_model, final_clip = lora_handler.extract_and_load(prompt, model, clip)
+        # Phase 3: LoRA Internal Loading + Automatic Tag Injection
+        # We pass the behavior mode to the handler
+        prompt, final_model, final_clip, lora_info = lora_handler.extract_and_load(prompt, model, clip, lora_tags_behavior)
 
         additions = tag_selector.get_prefixes_and_suffixes()
         if additions['prefixes']:
@@ -882,4 +947,4 @@ class UmiAIWildcardNode:
         final_width = settings['width'] if settings['width'] > 0 else width
         final_height = settings['height'] if settings['height'] > 0 else height
 
-        return (final_model, final_clip, prompt, final_negative, final_width, final_height)
+        return (final_model, final_clip, prompt, final_negative, final_width, final_height, lora_info)
