@@ -194,12 +194,12 @@ Artist signature: __#artist__
 
 Here's a prompt I like to use all the time:
 
-`$char1={__RandomGirls__}
-$char2={__RandomGirls__}
-$color1={__Colors__}
-$color2={__Colors__}
-$color3={__Colors__}
-$color4={__Colors__}`
+`$char1={__RandomGirls__}`
+`$char2={__RandomGirls__}`
+`$color1={__Colors__}`
+`$color2={__Colors__}`
+`$color3={__Colors__}`
+`$color4={__Colors__}`
 
 `A fullbody illustration of two girls standing together at a fashion show in the style of __ArtistNames__. $char1 is wearing __RandomOutfit__ with a primary color of $color1 and a secondary color of $color2. $char2 is wearing __RandomOutfit__ with a primary color of $color3 and a secondary color of $color4. {Both girls are __SharedPose__|The girls are holding hands and smiling while __MiscPose__}.`
 
