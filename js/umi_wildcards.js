@@ -202,8 +202,11 @@ const HELP_HTML = `
                 <table class="umi-table">
                     <tr><td><span class="umi-code">$var={...}</span></td><td>Define variable.</td></tr>
                     <tr><td><span class="umi-code">[if K : A | B]</span></td><td>Logic Gate.</td></tr>
+                    <tr><td><span class="umi-code">[shuffle: a, b]</span></td><td>Randomize order.</td></tr>
+                    <tr><td><span class="umi-code">[clean: a, , b]</span></td><td>Fix bad formatting.</td></tr>
+                    <tr><td><span class="umi-code">text --neg: bad</span></td><td>Scoped Negative.</td></tr>
                     <tr><td><span class="umi-code">&lt;lora:name:1.0&gt;</span></td><td>Load LoRA (Auto).</td></tr>
-                    <tr><td><span class="umi-code">@@width=768, height=768@@</span></td><td>Set Resolution.</td></tr>
+                    <tr><td><span class="umi-code">@@width=768...@@</span></td><td>Set Resolution.</td></tr>
                     <tr><td><span class="umi-code">**text**</span></td><td>Move to Negative.</td></tr>
                 </table>
             </div>
@@ -279,6 +282,27 @@ Green</div>
                 <div class="umi-block">&lt;[red]&gt; background.</div>
             </div>
         </div>
+        
+        <div style="margin-top: 10px;">
+            <h4>3. CSV Data Injection (.csv)</h4>
+            <p>You can use spreadsheet data to inject multiple correlated variables at once. The header row of the CSV becomes the variable names.</p>
+            <div class="umi-grid-2">
+                <div>
+                     <p><strong>File (wildcards/characters.csv):</strong></p>
+                     <div class="umi-block">name, hair, outfit, weapon
+Alice, Blonde, Silver Armor, Sword
+Bob, Black, Dark Robes, Dagger</div>
+                </div>
+                <div>
+                     <p><strong>Usage:</strong></p>
+                     <div class="umi-block">// 1. Pick a random row
+__characters.csv__
+
+// 2. Use the headers as variables
+A photo of $name, wearing $outfit, holding a $weapon.</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="umi-section">
@@ -328,6 +352,23 @@ $class={Knight|Cyberpunk}
         </table>
     </div>
 
+    <div class="umi-section">
+        <h3>🧠 Integrated LLM (Prompt Naturalizer)</h3>
+        <p>Turn simple lists of tags into rich, descriptive, and natural sentences using a local LLM.</p>
+        
+        <div class="umi-grid-2">
+            <div style="background: #151515; padding: 10px; border-radius: 6px;">
+                <strong>1. Setup</strong><br>
+                <span style="font-size:12px; color:#888;">Select <strong>"Download Recommended"</strong> in the <code>llm_model</code> widget. Wait for the download (auto-saves to <code>models/llm</code>).</span>
+            </div>
+            <div style="background: #151515; padding: 10px; border-radius: 6px;">
+                <strong>2. Usage</strong><br>
+                <span style="font-size:12px; color:#888;">Set <code>naturalize_prompt</code> to <strong>"Yes"</strong>.<br>Input: "1girl, solo, beach"<br>Output: "A stunning close-up of a lone woman standing on a sunlit beach..."</span>
+            </div>
+        </div>
+        <p style="font-size:12px; color:#888;">*Note: This feature automatically protects your LoRA tags &lt;...&gt; from being rewritten by the LLM.</p>
+    </div>
+
     <div class="umi-section" style="margin-bottom: 0;">
         <h3>🚀 Production Workflows</h3>
         <p>Copy-paste these blocks to test the full power of the node.</p>
@@ -361,6 +402,17 @@ $lora_setup = { [if Anime : <lora:AnimeOutline:1.0>] [if Photorealistic : <lora:
 $lora_setup
 A $style portrait of a girl.</div>
         </details>
+        
+        <details>
+             <summary>🧪 Scoped Negatives & Post-Processing</summary>
+             <div class="umi-block">// 1. Scoped Negatives:
+// This negative prompt ONLY applies if this specific line is chosen.
+A red car on a street --neg: blue, green, pedestrians
+
+// 2. Formatting Cleaners:
+// Randomize the list order and remove empty commas
+[clean: [shuffle: 1girl, solo, __optional_hat__, __optional_glasses__]]</div>
+        </details>
     </div>
 `;
 
@@ -380,7 +432,7 @@ function showHelpModal() {
         <div class="umi-help-content">
             <div class="umi-help-header">
                 <div>
-                    <h2>📘 UmiAI Reference Manual <span class="version">v1.1</span></h2>
+                    <h2>📘 UmiAI Reference Manual <span class="version">v1.2</span></h2>
                 </div>
                 <button class="umi-help-close" onclick="this.closest('.umi-help-modal').remove()">CLOSE</button>
             </div>

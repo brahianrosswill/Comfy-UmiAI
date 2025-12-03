@@ -9,6 +9,9 @@ UmiAI transforms static prompts into dynamic, context-aware workflows. It introd
 ## ✨ Key Features
 
 * **🔋 Native LoRA Loading:** Type `<lora:filename:1.0>` directly in the text. The node patches the model internally—no external LoRA Loader nodes required.
+* **🧠 Integrated Local LLM:** Turn simple tag lists into rich natural language descriptions using local models (Qwen/Llama3). Runs entirely on CPU to save VRAM.
+
+* **📊 CSV Data Injection:** Load spreadsheet data (.csv) and map columns to variables (e.g., $name, $outfit) for complex character handling.
 * **🛠️ Z-Image Support:** Automatically detects and fixes Z-Image format LoRAs (QKV Fusion) on the fly.
 * **🧠 Persistent Variables:** Define a choice once (`$hair={Red|Blue}`) and reuse it (`$hair`) anywhere to ensure consistency.
 * **🔀 Conditional Logic:** `[if keyword : True Text | False Text]` logic gates. Perfect for ensuring outfits match genres.
@@ -72,6 +75,36 @@ The UmiAI node acts as the "Central Brain". You must pass your **Model** and **C
 | **Logic Gate** | `[if Key : A \| B]` | `[if Cyberpunk : Techwear \| Armor]` |  |
 | **Set Size** | `@@w=X, h=Y@@` | `@@width=1024, height=1536@@` | |
 | **Comments** | `//` or `#` | `// This is a comment` | |
+
+---
+
+## 🧠 Integrated LLM (Prompt Naturalizer)
+
+Turn "tag soup" (e.g., 1girl, solo, beach) into lush, descriptive prose using a local Large Language Model.
+
+**Setup & Settings**
+**Select Model:** In the llm_model widget, select "Download Recommended". You can choose between:
+
+**Qwen2.5-1.5B (Fast)**: Low RAM usage, good for quick descriptions.
+
+**Dolphin-Llama3.1-8B (Smart)**: Uncensored, follows complex instructions perfectly.
+
+Enable: Set naturalize_prompt to Yes.
+
+Hardware: The LLM runs entirely on your CPU/RAM to preserve your GPU VRAM for image generation.
+
+**Customization Widgets**
+**Temperature:** Controls creativity. 0.7 is standard. Lower it for more literal descriptions, raise it for hallucinations.
+
+**Max Tokens:** Limits the length of the description (600 is usually a paragraph).
+
+**Custom System Prompt:** Override the default behavior.
+
+Default: "Creative Writer" persona (Flowery, descriptive, no lists).
+
+Example Override: "You are a horror writer. Describe the tags in a terrifying way."
+
+**Note:** The LLM automatically ignores/protects <lora:...> tags, so they won't be hallucinated away.
 
 ---
 
