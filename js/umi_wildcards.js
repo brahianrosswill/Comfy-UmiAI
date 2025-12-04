@@ -283,27 +283,30 @@ Green</div>
             </div>
         </div>
         
-        <div style="margin-top: 10px;">
-            <h4>3. CSV Data Injection (.csv)</h4>
-            <p>You can use spreadsheet data to inject multiple correlated variables at once. The header row of the CSV becomes the variable names.</p>
+        <div style="margin-top: 20px;">
+            <h4>3. CSV Data Injection (Correlated Variables)</h4>
+            <p>Use <code>.csv</code> files to link multiple attributes together (e.g. Ensuring a "Paladin" always has "Plate Armor"). The node picks a <strong>single random row</strong> and maps the headers to variables.</p>
+            
             <div class="umi-grid-2">
                 <div>
-                     <p><strong>File (wildcards/characters.csv):</strong></p>
-                     <div class="umi-block">name, hair, outfit, weapon
-Alice, Blonde, Silver Armor, Sword
-Bob, Black, Dark Robes, Dagger</div>
+                     <p><strong>Step 1: The File (wildcards/card.csv)</strong></p>
+                     <table class="umi-table" style="margin-bottom:5px">
+                        <tr><th style="color:#98c379">name</th><th style="color:#98c379">weapon</th><th style="color:#98c379">armor</th></tr>
+                        <tr><td>Paladin</td><td>Hammer</td><td>Plate</td></tr>
+                        <tr><td>Rogue</td><td>Dagger</td><td>Leather</td></tr>
+                     </table>
+                     <p style="font-size:11px; opacity:0.7">*The Header Row (Row 1) defines the variable names.</p>
                 </div>
                 <div>
-                     <p><strong>Usage:</strong></p>
-                     <div class="umi-block">// 1. Pick a random row
-__characters.csv__
+                     <p><strong>Step 2: The Usage</strong></p>
+                     <div class="umi-block">// 1. Trigger the file to lock in a random row
+__card.csv__
 
 // 2. Use the headers as variables
-A photo of $name, wearing $outfit, holding a $weapon.</div>
+A fantasy $name holding a $weapon, wearing $armor.</div>
                 </div>
             </div>
         </div>
-    </div>
 
     <div class="umi-section">
         <h3>💾 Variables & Persistence</h3>
