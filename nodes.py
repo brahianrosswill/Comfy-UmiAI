@@ -867,6 +867,11 @@ class UmiAIWildcardNode:
         # Handle "None"
         if model_choice == "None": return None
         
+        # Define the target folder: ComfyUI/models/llm
+        target_folder = os.path.join(folder_paths.models_dir, "llm")
+        if not os.path.exists(target_folder):
+            os.makedirs(target_folder, exist_ok=True)
+
         # Handle Download Request
         if model_choice in DOWNLOADABLE_MODELS:
             if not HF_HUB_AVAILABLE:
@@ -877,20 +882,31 @@ class UmiAIWildcardNode:
             repo_id = model_info["repo_id"]
             filename = model_info["filename"]
             
-            print(f"[UmiAI] Checking/Downloading {filename} from {repo_id}...")
+            # Check if file already exists in models/llm to avoid re-download logic
+            local_file_path = os.path.join(target_folder, filename)
+            if os.path.exists(local_file_path):
+                return local_file_path
+
+            print(f"[UmiAI] Downloading {filename} to {target_folder}...")
             try:
-                # This downloads to the huggingface cache and returns the path
-                path = hf_hub_download(repo_id=repo_id, filename=filename)
+                # local_dir forces it to your ComfyUI folder instead of the hidden cache
+                path = hf_hub_download(
+                    repo_id=repo_id, 
+                    filename=filename, 
+                    local_dir=target_folder, 
+                    local_dir_use_symlinks=False 
+                )
                 return path
             except Exception as e:
                 print(f"[UmiAI] Download failed: {e}")
                 return None
         
-        # Handle Existing File
+        # Handle Existing File (Manual Selection)
         else:
             path = folder_paths.get_full_path("llm", model_choice)
             if not path:
-                path = os.path.join(folder_paths.models_dir, "llm", model_choice)
+                # Fallback manual path check
+                path = os.path.join(target_folder, model_choice)
             return path
 
     def run_llm_naturalizer(self, text, model_choice, temperature, max_tokens, custom_prompt):

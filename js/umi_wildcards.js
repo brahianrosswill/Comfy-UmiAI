@@ -445,7 +445,7 @@ function showHelpModal() {
 }
 
 // =============================================================================
-// PART 3: REGISTRATION
+// PART 3: REGISTRATION & DYNAMIC VISIBILITY
 // =============================================================================
 
 app.registerExtension({
@@ -459,6 +459,7 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name !== "UmiAIWildcardNode") return;
 
+        // 1. Add Help Menu
         const getExtraMenuOptions = nodeType.prototype.getExtraMenuOptions;
         nodeType.prototype.getExtraMenuOptions = function(_, options) {
             if (getExtraMenuOptions) getExtraMenuOptions.apply(this, arguments);
@@ -473,6 +474,66 @@ app.registerExtension({
         nodeType.prototype.onNodeCreated = function () {
             if (onNodeCreated) onNodeCreated.apply(this, arguments);
 
+            // ============================================================
+            // DYNAMIC WIDGET VISIBILITY LOGIC
+            // ============================================================
+            const llmWidgets = ["llm_model", "llm_temperature", "llm_max_tokens", "custom_system_prompt"];
+            const triggerName = "naturalize_prompt";
+            
+            // Find the widgets
+            const triggerWidget = this.widgets.find(w => w.name === triggerName);
+            
+            if (triggerWidget) {
+                // 1. Store original widget properties (so we can restore them later)
+                this.widgets.forEach(w => {
+                    if (llmWidgets.includes(w.name)) {
+                        w.origType = w.type;
+                        w.origComputeSize = w.computeSize;
+                    }
+                });
+
+                // 2. Define the toggle function
+                const refreshWidgets = () => {
+                    const visible = triggerWidget.value === "Yes";
+                    let changed = false;
+
+                    for (const w of this.widgets) {
+                        if (llmWidgets.includes(w.name)) {
+                            // Case A: Show widgets (Restore type)
+                            if (visible && w.type === "hidden") {
+                                w.type = w.origType;
+                                w.computeSize = w.origComputeSize;
+                                changed = true;
+                            } 
+                            // Case B: Hide widgets (Change type to hidden & collapse size)
+                            else if (!visible && w.type !== "hidden") {
+                                w.type = "hidden";
+                                w.computeSize = () => [0, -4]; // Negative height collapses the gap
+                                changed = true;
+                            }
+                        }
+                    }
+                    
+                    // Force node redraw if layout changed
+                    if (changed) {
+                        this.setSize(this.computeSize());
+                    }
+                };
+
+                // 3. Attach callback and run once
+                const prevCallback = triggerWidget.callback;
+                triggerWidget.callback = (value) => {
+                    if(prevCallback) prevCallback(value);
+                    refreshWidgets();
+                };
+                
+                // Run immediately to set initial state
+                refreshWidgets();
+            }
+
+            // ============================================================
+            // AUTOCOMPLETE LOGIC (EXISTING)
+            // ============================================================
             const textWidget = this.widgets.find(w => w.name === "text");
             if (!textWidget || !textWidget.inputEl) return;
 
