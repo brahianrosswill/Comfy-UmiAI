@@ -24,7 +24,7 @@ from aiohttp import web
 GLOBAL_CACHE = {}
 
 # ==============================================================================
-# OPTIONAL IMPORTS
+# OPTIONAL IMPORTS (LLM & Downloader)
 # ==============================================================================
 try:
     from llama_cpp import Llama
@@ -152,9 +152,8 @@ class TagLoader:
         for root, dirs, files in os.walk(self.wildcard_location):
             for file in files:
                 full_path = os.path.join(root, file)
-                # Get path relative to wildcard root (e.g. "style/colors.txt")
                 rel_path = os.path.relpath(full_path, self.wildcard_location)
-                # Key without extension (e.g. "style/colors")
+                # Normalize slashes for consistency across OS
                 key = os.path.splitext(rel_path)[0].replace(os.sep, '/')
                 
                 name_lower = file.lower()
@@ -166,10 +165,6 @@ class TagLoader:
                     self.csv_lookup[key.lower()] = full_path
 
     def build_index(self):
-        """
-        Builds a comprehensive index of all valid wildcard calls.
-        For YAMLs, it expands them: 'style.yaml' with key 'hair' becomes 'style/hair'.
-        """
         if self.index_built:
             return
 
@@ -181,22 +176,19 @@ class TagLoader:
         for key in self.csv_lookup.keys():
             new_index.add(key)
 
-        # 2. Add YAML Keys (Namespace them with the filename!)
+        # 2. Add YAML Keys
         for file_key, full_path in self.yaml_lookup.items():
             if file_key == 'globals':
                 continue
             try:
-                # We load the YAML specifically to index its keys
                 with open(full_path, encoding="utf8") as f:
                     data = yaml.safe_load(f)
                     if self.is_umi_format(data):
                          for k in data.keys():
-                             new_index.add(k) # Umi format usually global keys
+                             new_index.add(k)
                     else:
-                        # Nested Format: We need to combine Filename + Key
                         flat_data = self.flatten_hierarchical_yaml(data)
                         for k in flat_data.keys():
-                            # Combined: "filename/key"
                             combined = f"{file_key}/{k}"
                             new_index.add(combined)
             except Exception as e:
@@ -253,16 +245,11 @@ class TagLoader:
         return False
 
     def load_tags(self, requested_tag, verbose=False):
-        """
-        Smart Loader: Handles "style/anime" where 'style' is a YAML file and 'anime' is a key.
-        """
-        # 1. Check Global Cache
         if requested_tag in GLOBAL_CACHE:
             return GLOBAL_CACHE[requested_tag]
         
         lower_tag = requested_tag.lower()
         
-        # --- STRATEGY 1: Exact File Match (TXT/CSV) ---
         if lower_tag in self.txt_lookup:
             with open(self.txt_lookup[lower_tag], encoding="utf8") as f:
                 lines = read_file_lines(f)
@@ -276,28 +263,16 @@ class TagLoader:
                 GLOBAL_CACHE[requested_tag] = rows
                 return rows
 
-        # --- STRATEGY 2: YAML File Match or Nested Key ---
-        # We assume the path might be "Folder/File/Key" or "File/Key"
-        # We split the tag from right to left to find the longest matching filename.
-        
         parts = lower_tag.split('/')
-        
-        # Iteratively attempt to find a valid YAML file in the path
-        # Example: "style/anime/90s" -> Checks "style/anime/90s.yaml" (No), "style/anime.yaml" (Yes?), "style.yaml" (Yes?)
-        
         found_file = None
         key_suffix = ""
 
-        # Try exact yaml match first
         if lower_tag in self.yaml_lookup:
             found_file = self.yaml_lookup[lower_tag]
-            key_suffix = "" # Root load
         else:
-            # Split and backtrack
             for i in range(len(parts) - 1, 0, -1):
                 potential_file = "/".join(parts[:i])
                 potential_key = "/".join(parts[i:])
-                
                 if potential_file in self.yaml_lookup:
                     found_file = self.yaml_lookup[potential_file]
                     key_suffix = potential_key
@@ -308,44 +283,31 @@ class TagLoader:
                 try:
                     data = yaml.safe_load(file)
                     
-                    # Logic 1: UMI Format (Keys are basically global to that file)
                     if self.is_umi_format(data):
-                        # Cache the specific keys
                         for title, entry in data.items():
                             if isinstance(entry, dict):
                                 processed = self.process_yaml_entry(title, entry)
                                 if processed['tags']:
                                     self.yaml_entries[title] = processed
-
-                        # If looking for a specific key in UMI format
                         if key_suffix:
-                             # Case-insensitive lookup
                              for k, v in data.items():
                                  if k.lower() == key_suffix:
                                      processed = self.process_yaml_entry(k, v)
                                      GLOBAL_CACHE[requested_tag] = processed['prompts']
                                      return processed['prompts']
                         else:
-                            # Cannot load "Root" of UMI file as a list
                             return []
-
-                    # Logic 2: Nested/Flat Format
                     else:
                         flat_data = self.flatten_hierarchical_yaml(data)
-                        
                         if key_suffix:
-                            # BUG FIX: Case-Insensitive Lookup
-                            # The user might ask for 'tropical' but key is 'Tropical'
-                            # We check lowercased keys against our lowercased suffix
+                            # Case-Insensitive Lookup
                             for k, v in flat_data.items():
                                 if k.lower() == key_suffix:
                                     GLOBAL_CACHE[requested_tag] = v
                                     return v
-                            # Fallback if no fuzzy match found
                             return []
                         else:
                             return []
-
                 except Exception as e:
                     if verbose: print(f'Error parsing YAML {found_file}: {e}')
 
@@ -386,7 +348,6 @@ class TagSelector:
     def process_scoped_negative(self, text):
         if not isinstance(text, str):
             return text
-        
         if "--neg:" in text:
             parts = text.split("--neg:", 1)
             positive = parts[0].strip()
@@ -397,7 +358,6 @@ class TagSelector:
         return text
 
     def get_tag_choice(self, parsed_tag, tags):
-        # CSV Handling
         if isinstance(tags, list) and len(tags) > 0 and isinstance(tags[0], dict):
             row = random.choice(tags)
             vars_out = []
@@ -433,16 +393,13 @@ class TagSelector:
 
         if selected:
             self.used_values[selected] = True
-            # Check for UMI metadata style
             entry_details = self.tag_loader.get_entry_details(selected)
             if entry_details:
                 self.selected_entries[parsed_tag] = entry_details
                 if entry_details['prompts']:
                     selected = random.choice(entry_details['prompts'])
-            
             if isinstance(selected, str) and '#' in selected:
                 selected = selected.split('#')[0].strip()
-            
             selected = self.process_scoped_negative(selected)
 
         return selected
@@ -454,7 +411,6 @@ class TagSelector:
             
             if nested_tag in self.processing_stack:
                 return value
-            
             self.processing_stack.add(nested_tag)
             
             if nested_seed and nested_seed in self.resolved_seeds:
@@ -533,8 +489,6 @@ class TagSelector:
             if matches:
                 random.shuffle(matches)
                 for selected_key in matches:
-                    # IMPORTANT: Recursively select the expanded key
-                    # We pass the same groups if present
                     result = self.select(selected_key, groups)
                     if result and str(result).strip():
                         return result
@@ -1159,21 +1113,28 @@ class UmiAIWildcardNode:
     # --- SAFETY HELPER ---
     def get_val(self, kwargs, key, default, value_type=None):
         val = kwargs.get(key, default)
+        
+        # Type enforcement
         if value_type and not isinstance(val, value_type):
             try:
-                if value_type == int: return int(val)
-                if value_type == float: return float(val)
-                if value_type == str: return str(val)
+                if value_type == int:
+                    return int(val)
+                if value_type == float:
+                    return float(val)
+                if value_type == str:
+                    return str(val)
             except:
                 return default
+        
         return val
 
     def process(self, **kwargs):
         # 1. EXTRACT INPUTS SAFELY (CRASH PROOFING)
+        # Using .get_val to safely retrieve arguments or default if missing/wrong type
         text = self.get_val(kwargs, "text", "", str)
         seed = self.get_val(kwargs, "seed", 0, int)
         
-        # Objects (Model/CLIP) - Handle None explicitly
+        # Objects (Model/CLIP) - Handle None explicitly (standard Comfy behavior)
         model = kwargs.get("model", None)
         clip = kwargs.get("clip", None)
 
@@ -1209,6 +1170,7 @@ class UmiAIWildcardNode:
             line = line.strip()
             if line:
                 clean_lines.append(line)
+        
         text = "\n".join(clean_lines)
         text = text.replace('___UMI_HASH_PROTECT___', '#').replace('<___UMI_HASH_PROTECT___', '<#')
 
@@ -1302,8 +1264,18 @@ async def get_wildcards(request):
     options = {'ignore_paths': True, 'verbose': False}
     loader = TagLoader(wildcards_path, options)
     loader.build_index()
-    sorted_keys = sorted(list(loader.files_index))
-    return web.json_response(sorted_keys)
+    
+    # 1. Get Wildcards
+    wildcards = sorted(list(loader.files_index))
+    
+    # 2. Get LoRAs (New functionality)
+    loras = folder_paths.get_filename_list("loras")
+    loras = sorted(loras) if loras else []
+
+    return web.json_response({
+        "wildcards": wildcards,
+        "loras": loras
+    })
 
 @server.PromptServer.instance.routes.post("/umiapp/refresh")
 async def refresh_wildcards(request):
@@ -1313,5 +1285,14 @@ async def refresh_wildcards(request):
     options = {'ignore_paths': True, 'verbose': False}
     loader = TagLoader(wildcards_path, options)
     loader.build_index() # Rebuild index immediately
-    sorted_keys = sorted(list(loader.files_index))
-    return web.json_response({"status": "success", "count": len(sorted_keys)})
+    
+    wildcards = sorted(list(loader.files_index))
+    loras = folder_paths.get_filename_list("loras")
+    loras = sorted(loras) if loras else []
+    
+    return web.json_response({
+        "status": "success", 
+        "count": len(wildcards),
+        "wildcards": wildcards,
+        "loras": loras
+    })

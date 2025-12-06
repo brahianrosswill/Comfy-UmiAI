@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 
 // =============================================================================
-// PART 1: AUTOCOMPLETE LOGIC (Enhanced with Keyboard Navigation)
+// PART 1: AUTOCOMPLETE LOGIC (Enhanced with Fuzzy Search)
 // =============================================================================
 
 class AutoCompletePopup {
@@ -11,7 +11,7 @@ class AutoCompletePopup {
             position: "absolute",
             display: "none",
             backgroundColor: "#1e1e1e",
-            border: "1px solid #61afef", // Blue border to indicate active state
+            border: "1px solid #61afef", 
             zIndex: "9999",
             maxHeight: "250px",
             overflowY: "auto",
@@ -33,7 +33,7 @@ class AutoCompletePopup {
     show(x, y, options, onSelect) {
         this.items = options;
         this.onSelectCallback = onSelect;
-        this.selectedIndex = 0; // Reset selection to top
+        this.selectedIndex = 0; 
         this.visible = true;
 
         this.element.style.left = x + "px";
@@ -62,20 +62,18 @@ class AutoCompletePopup {
             : `${this.items.length} Suggestions`;
         this.element.appendChild(header);
 
-        // List Items
+        // List Items (Limit to 50 for performance)
         this.items.slice(0, 50).forEach((opt, index) => {
             const div = document.createElement("div");
             div.innerText = opt;
             
-            // Base Styles
             Object.assign(div.style, {
                 cursor: "pointer", padding: "6px 10px",
                 borderBottom: "1px solid #2a2a2a", transition: "background 0.05s"
             });
 
-            // Highlight Selected
             if (index === this.selectedIndex) {
-                div.style.backgroundColor = "#2d4f6c"; // Selected Blue
+                div.style.backgroundColor = "#2d4f6c"; 
                 div.style.color = "#fff";
                 div.style.borderLeft = "3px solid #61afef";
             } else {
@@ -83,10 +81,9 @@ class AutoCompletePopup {
                 div.style.borderLeft = "3px solid transparent";
             }
             
-            // Mouse Interaction
             div.onmouseover = () => {
                 this.selectedIndex = index;
-                this.render(); // Re-render to update highlights
+                this.render(); 
             };
             
             div.onmousedown = (e) => {
@@ -97,10 +94,9 @@ class AutoCompletePopup {
             this.element.appendChild(div);
         });
 
-        // Auto-Scroll to keep selection in view
+        // Auto-Scroll
         if (this.element.children[this.selectedIndex + 1]) {
             const activeEl = this.element.children[this.selectedIndex + 1];
-            // Simple logic to keep element in view
             if (activeEl.offsetTop < this.element.scrollTop) {
                 this.element.scrollTop = activeEl.offsetTop;
             } else if (activeEl.offsetTop + activeEl.offsetHeight > this.element.scrollTop + this.element.offsetHeight) {
@@ -109,10 +105,8 @@ class AutoCompletePopup {
         }
     }
 
-    // Keyboard Navigation Handlers
     navigate(direction) {
         if (!this.visible) return;
-        
         const max = Math.min(this.items.length, 50) - 1;
         if (direction === 1) {
             this.selectedIndex = this.selectedIndex >= max ? 0 : this.selectedIndex + 1;
@@ -131,7 +125,7 @@ class AutoCompletePopup {
 }
 
 // =============================================================================
-// PART 2: THE PROFESSIONAL USER GUIDE UI
+// PART 2: THE PROFESSIONAL USER GUIDE UI (FULL VERSION)
 // =============================================================================
 
 const HELP_STYLES = `
@@ -504,23 +498,93 @@ function showHelpModal() {
 // PART 3: REGISTRATION & DYNAMIC VISIBILITY
 // =============================================================================
 
+// Helper: Custom fuzzy search function for client-side filtering
+function getFuzzyMatches(query, allItems) {
+    // FIX: If query is empty, return everything!
+    if (!query || query.trim() === "") {
+        return allItems.sort(); 
+    }
+    
+    // Normalize query
+    const lowerQuery = query.toLowerCase();
+    
+    // Score items
+    // Score breakdown:
+    // 100: Exact Match
+    // 75:  Starts With
+    // 50:  Contains
+    // 10+: Fuzzy Subsequence (higher is better)
+    
+    const scored = allItems.map(item => {
+        const lowerItem = item.toLowerCase();
+        
+        // 1. Exact Match
+        if (lowerItem === lowerQuery) return { item, score: 100 };
+        
+        // 2. Starts With
+        if (lowerItem.startsWith(lowerQuery)) return { item, score: 75 };
+        
+        // 3. Contains
+        if (lowerItem.includes(lowerQuery)) return { item, score: 50 };
+        
+        // 4. Fuzzy Sequence Check
+        // e.g. "trp" matches "TRoPical"
+        let qIdx = 0;
+        let fuzzyScore = 0;
+        for (let i = 0; i < lowerItem.length; i++) {
+            if (lowerItem[i] === lowerQuery[qIdx]) {
+                qIdx++;
+                fuzzyScore += (100 - i); // Earlier matches are better
+            }
+            if (qIdx === lowerQuery.length) break;
+        }
+        
+        if (qIdx === lowerQuery.length) {
+            // Found all characters in order
+            return { item, score: 10 + (fuzzyScore / 100) };
+        }
+        
+        return { item, score: 0 };
+    });
+
+    // Filter out 0 scores and Sort by score DESC
+    return scored
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(s => s.item);
+}
+
 app.registerExtension({
     name: "UmiAI.WildcardSystem",
     async setup() {
+        this.wildcards = [];
+        this.loras = [];
+
         // Define a function we can call later to refresh the lists
         this.fetchWildcards = async () => {
              try {
                 // Fetch from the correct endpoint (matches your new Python)
                 const resp = await fetch("/umiapp/wildcards");
                 if (resp.ok) {
-                    // Returns sorted array
-                    this.wildcards = await resp.json(); 
+                    const data = await resp.json();
+                    
+                    // Handle both old array format and new dict format for backward compatibility
+                    if (Array.isArray(data)) {
+                        this.wildcards = data;
+                        this.loras = [];
+                    } else {
+                        // New structure from nodes.py
+                        this.wildcards = data.wildcards || [];
+                        this.loras = data.loras || [];
+                    }
                 } else {
                     this.wildcards = [];
+                    this.loras = [];
                 }
             } catch (e) {
                 console.error("[UmiAI] Failed to load wildcards:", e);
                 this.wildcards = [];
+                this.loras = [];
             }
         };
 
@@ -553,7 +617,7 @@ app.registerExtension({
             // ============================================================
             // Add a button that hits the API to refresh file caches
             this.addWidget("button", "🔄 Refresh Wildcards", null, () => {
-                const btn = self.widgets.find(w => w.name === "🔄 Refresh Wildcards" || w.name === "✅ Refreshed!" || w.name === "❌ Error" || w.name === "⏳ Refreshing...");
+                const btn = self.widgets.find(w => w.name.includes("Refresh") || w.name.includes("Refreshed") || w.name.includes("Error") || w.name.includes("Refreshing"));
                 
                 // Visual feedback: Loading
                 if(btn) {
@@ -635,7 +699,7 @@ app.registerExtension({
             }
 
             // ============================================================
-            // AUTOCOMPLETE LOGIC (WITH ARROW KEYS)
+            // AUTOCOMPLETE LOGIC (WITH ARROW KEYS & FUZZY SEARCH)
             // ============================================================
             const textWidget = this.widgets.find(w => w.name === "text");
             if (!textWidget || !textWidget.inputEl) return;
@@ -678,10 +742,10 @@ app.registerExtension({
                 const beforeCursor = text.substring(0, cursor);
 
                 // Regex Config
-                const matchFile = beforeCursor.match(/__([\w\/\-]*)$/);
+                const matchFile = beforeCursor.match(/__([\w\/\-\s]*)$/); // Added \s to allow spaces while typing
                 const matchLora = beforeCursor.match(/<lora:([^>]*)$/);
 
-                if (!ext || !ext.wildcards) return;
+                if (!ext) return;
 
                 let options = [];
                 let triggerType = ""; 
@@ -691,19 +755,21 @@ app.registerExtension({
                 // -- Wildcard Logic --
                 if (matchFile) {
                     triggerType = "file";
-                    query = matchFile[1].toLowerCase();
+                    query = matchFile[1]; // Keep case for fuzzy
                     matchIndex = matchFile.index;
-                    // Filter the flat list from Python
-                    options = ext.wildcards.filter(w => w.toLowerCase().includes(query));
+                    
+                    // FUZZY SEARCH IMPLEMENTATION
+                    options = getFuzzyMatches(query, ext.wildcards);
+
                 } 
-                // -- LoRA Logic (Basic Fallback) --
+                // -- LoRA Logic (NOW FIXED WITH FUZZY SEARCH) --
                 else if (matchLora) {
                     triggerType = "lora";
-                    query = matchLora[1].toLowerCase();
+                    query = matchLora[1];
                     matchIndex = matchLora.index;
-                    // Note: Your node currently only sends wildcards. 
-                    // Add LoRA list in Python if you want this to work fully.
-                    options = []; 
+                    
+                    // Use fuzzy matching on the fetched LoRA list
+                    options = getFuzzyMatches(query, ext.loras); 
                 }
 
                 if (triggerType && options.length > 0) {
