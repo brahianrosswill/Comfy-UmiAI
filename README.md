@@ -17,7 +17,7 @@ UmiAI transforms static prompts into dynamic, context-aware workflows. It introd
 
 ## ✨ Key Features
 
-* **🔋 Native LoRA Loading:** Type `<lora:filename:1.0>` directly in the text. The node patches the model internally—no external LoRA Loader nodes required.
+* **🔋 Native LoRA Loading:** Type `<lora:filename:1.0>` directly in the text. The node patches the model internally/ No external LoRA Loader nodes required.
 * **🧠 Integrated Local LLM:** Turn simple tag lists into rich natural language descriptions using local models (Qwen/Llama3). Runs entirely on CPU to save VRAM.
 * **🔀 Advanced Logic Engine:** Full support for `AND`, `OR`, `NOT`, `XOR`, and `( )` grouping. Use it to filter wildcards or conditionally change prompt text.
 * **🧠 Persistent Variables:** Define a choice once (`$hair={Red|Blue}`) and reuse it (`$hair`) anywhere to ensure consistency.
@@ -115,22 +115,7 @@ You can change the text of your prompt based on other words present in the promp
 ```
 
 ### 2. Logic in Wildcards (`__[ ... ]__`)
-You can search your YAML cards (Global Index) for entries that match specific tags. This replaces the old folder-based lookup.
-
-```yaml
-# Assuming you have cards tagged with 'fire', 'ice', 'magic'
-```
-
-```text
-// Pick a card that has the 'fire' tag OR the 'ice' tag
-__[fire OR ice]__
-
-// Pick a card that has 'blue' but NOT 'red'
-__[blue AND NOT red]__
-
-// Pick a card that is 'magic' but EXCLUDE cards that are both fire and ice
-__[magic AND (fire XOR ice)]__
-```
+You can also search your Wildcards and YAML cards (Global Index) for entries that match specific tags. This replaces the old folder-based lookup.
 
 ---
 
