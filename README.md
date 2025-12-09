@@ -4,20 +4,28 @@
 
 **A "Logic Engine" for ComfyUI Prompts.**
 
-UmiAI transforms static prompts into dynamic, context-aware workflows. It introduces **Persistent Variables**, **Conditional Logic**, **Native LoRA Loading**, and **External Data Fetching** directly into your prompt text box.
+UmiAI transforms static prompts into dynamic, context-aware workflows. It introduces **Persistent Variables**, **Advanced Boolean Logic**, **Native LoRA Loading**, and **External Data Fetching** directly into your prompt text box.
+
+> 🚨 **CRITICAL UPDATE NOTICE** 🚨
+> 
+> **If you are updating from an older version:**
+> The internal logic engine has been completely rewritten. You **MUST** right-click the UmiAI Node in your workflow and select **Fix Node (Recreate)** (or delete and re-add it). 
+>
+> If you do not do this, the new inputs and logic operators will not load, and your workflow may fail.
+
+---
 
 ## ✨ Key Features
 
 * **🔋 Native LoRA Loading:** Type `<lora:filename:1.0>` directly in the text. The node patches the model internally—no external LoRA Loader nodes required.
 * **🧠 Integrated Local LLM:** Turn simple tag lists into rich natural language descriptions using local models (Qwen/Llama3). Runs entirely on CPU to save VRAM.
-
-* **📊 CSV Data Injection:** Load spreadsheet data (.csv) and map columns to variables (e.g., $name, $outfit) for complex character handling.
-* **🛠️ Z-Image Support:** Automatically detects and fixes Z-Image format LoRAs (QKV Fusion) on the fly.
+* **🔀 Advanced Logic Engine:** Full support for `AND`, `OR`, `NOT`, `XOR`, and `( )` grouping. Use it to filter wildcards or conditionally change prompt text.
 * **🧠 Persistent Variables:** Define a choice once (`$hair={Red|Blue}`) and reuse it (`$hair`) anywhere to ensure consistency.
-* **🔀 Conditional Logic:** `[if keyword : True Text | False Text]` logic gates. Perfect for ensuring outfits match genres.
+* **🛠️ Z-Image Support:** Automatically detects and fixes Z-Image format LoRAs (QKV Fusion) on the fly.
 * **🌍 Global Presets:** Automatically load variables from `wildcards/globals.yaml` into *every* prompt.
 * **🎨 Danbooru Integration:** Type `char:name` to automatically fetch visual tags from Danbooru.
 * **📏 Resolution Control:** Set `@@width=1024@@` inside your prompt to control image size contextually.
+* **📊 CSV Data Injection:** Load spreadsheet data (.csv) and map columns to variables (e.g., $name, $outfit) for complex character handling.
 
 ---
 
@@ -66,19 +74,63 @@ The UmiAI node acts as the "Central Brain". You must pass your **Model** and **C
 
 ## ⚡ Syntax Cheat Sheet
 
-| Feature | Syntax | Example 1 | Example 2 |
-| :--- | :--- | :--- | :--- |
-| **Load LoRA** | `<lora:name:str>` | `<lora:pixel_art:0.8>` | `<lora:tifa_lockhart:1>` |
-| **Random Choice** | `{a\|b\|c}` | `{Red\|Blue\|Green}` | `{Girl\|Boy\|Nonbinary}` |
-| **Random Weights** | `{#%a\|#%b\|#%c}` | `{25%Red\|15%Blue\|60%Green}` | `{75%Girl\|115%Boy\|35%Nonbinary}` |
-| **Choose X of Y** | `{x-y$$a\|b\|c}` | `{0-2$$Hat\|Scarf\|Belt}` | `{1-3$$Swimming\|Flying\|Jumping}` |
-| **Variables** | `$var={opts}` | `$hair={Red\|Blue\|Green}` | `$char1={Tifa\|Aerith\|Zelda}` |
-| **Use Variable** | `$var` | `A woman with $color1 hair.` | `$char1 hugging $char2` |
-| **Danbooru** | `char:name` | `char:zelda` | `char:tifa_lockhart` |
-| **Sequential** | `{~a\|b\|c}` | `{~Front\|Side\|Back}` | `{~Seed1\|Seed2\|Seed3}` |
-| **Logic Gate** | `[if Key : A \| B]` | `[if Cyberpunk : Techwear \| Armor]` |  |
-| **Set Size** | `@@w=X, h=Y@@` | `@@width=1024, height=1536@@` | |
-| **Comments** | `//` or `#` | `// This is a comment` | |
+| Feature | Syntax | Example |
+| :--- | :--- | :--- |
+| **Load LoRA** | `<lora:name:str>` | `<lora:pixel_art:0.8>` |
+| **Random Choice** | `{a\|b\|c}` | `{Red\|Blue\|Green}` |
+| **Logic (Prompt)** | `[if Logic : True \| False]` | `[if red AND blue : Purple \| Grey]` |
+| **Logic (Wildcard)**| `__[Logic]__` | `__[fire OR (ice AND magic)]__` |
+| **Operators** | `AND`, `OR`, `NOT`, `XOR` | `[if (A OR B) AND NOT C : ...]` |
+| **Variables** | `$var={opts}` | `$hair={Red\|Blue}` |
+| **Equality Check** | `$var=val` | `[if $hair=Red : Fire Magic]` |
+| **Danbooru** | `char:name` | `char:tifa_lockhart` |
+| **Set Size** | `@@w=X, h=Y@@` | `@@width=1024, height=1536@@` |
+| **Comments** | `//` or `#` | `// This is a comment` |
+
+---
+
+## 🧠 Advanced Boolean Logic
+
+UmiAI now features a unified logic engine that works in both your **Prompts** and your **Wildcard Filters**.
+
+### Supported Operators
+* **AND**: Both conditions must be true.
+* **OR**: At least one condition must be true.
+* **NOT**: The condition must be absent/false.
+* **XOR**: Only one condition can be true (Exclusive OR).
+* **()**: Parentheses for grouping complex logic.
+
+### 1. Logic in Prompts (`[if ...]`)
+You can change the text of your prompt based on other words present in the prompt (or variables).
+
+```text
+// Simple check: If 'red' AND 'blue' are present, output 'Purple'.
+[if red AND blue : Purple | Grey]
+
+// Variable check: If $char is defined as 'robot', add oil.
+[if $char=robot : leaking oil | sweating]
+
+// Complex grouping
+[if (scifi OR cyber) AND NOT space : futuristic city | nature landscape]
+```
+
+### 2. Logic in Wildcards (`__[ ... ]__`)
+You can search your YAML cards (Global Index) for entries that match specific tags. This replaces the old folder-based lookup.
+
+```yaml
+# Assuming you have cards tagged with 'fire', 'ice', 'magic'
+```
+
+```text
+// Pick a card that has the 'fire' tag OR the 'ice' tag
+__[fire OR ice]__
+
+// Pick a card that has 'blue' but NOT 'red'
+__[blue AND NOT red]__
+
+// Pick a card that is 'magic' but EXCLUDE cards that are both fire and ice
+__[magic AND (fire XOR ice)]__
+```
 
 ---
 
