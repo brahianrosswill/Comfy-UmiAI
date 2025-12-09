@@ -25,6 +25,10 @@ GLOBAL_CACHE = {}
 # Persist the card index across generations
 GLOBAL_INDEX = {'built': False, 'files': set(), 'entries': {}} 
 
+# LRU Cache for LoRAs to prevent disk thrashing
+LORA_MEMORY_CACHE = {}
+MAX_LORA_CACHE_SIZE = 20
+
 # ==============================================================================
 # OPTIONAL IMPORTS (LLM & Downloader)
 # ==============================================================================
@@ -96,14 +100,17 @@ def parse_wildcard_range(range_str, num_variants):
     except:
         return 1, 1
 
-def process_wildcard_range(tag, lines):
+def process_wildcard_range(tag, lines, rng):
+    """
+    Processes range tags like $$1-3$$ using a specific RNG instance.
+    """
     if not lines:
         return ""
     if tag.startswith('#'):
         return None
     
     if "$$" not in tag:
-        selected = random.choice(lines)
+        selected = rng.choice(lines)
         if '#' in selected:
             selected = selected.split('#')[0].strip()
         return selected
@@ -111,16 +118,16 @@ def process_wildcard_range(tag, lines):
     range_str, tag_name = tag.split("$$", 1)
     try:
         low, high = parse_wildcard_range(range_str, len(lines))
-        num_items = random.randint(low, high)
+        num_items = rng.randint(low, high)
         if num_items == 0:
             return ""
             
-        selected = random.sample(lines, min(num_items, len(lines)))
+        selected = rng.sample(lines, min(num_items, len(lines)))
         selected = [line.split('#')[0].strip() if '#' in line else line for line in selected]
         return ", ".join(selected)
     except Exception as e:
         print(f"Error processing wildcard range: {e}")
-        selected = random.choice(lines)
+        selected = rng.choice(lines)
         if '#' in selected:
             selected = selected.split('#')[0].strip()
         return selected
@@ -308,27 +315,18 @@ class TagLoader:
         return results
 
     def is_umi_format(self, data):
-        """
-        Determines if the YAML file follows the Umi 'Card' structure.
-        Criteria: The data is a dictionary, and at least one of its values 
-        is a dictionary containing a 'Prompts' key (case-insensitive).
-        """
         if not isinstance(data, dict):
             return False
-        
-        # We iterate through the top-level keys (Card Titles)
         for key, value in data.items():
             if isinstance(value, dict):
-                # Check keys case-insensitively for 'prompts'
                 keys_lower = {k.lower() for k in value.keys()}
                 if 'prompts' in keys_lower:
                     return True
         return False
 
     def load_tags(self, requested_tag, verbose=False):
-        # Fix: Handle Global Index Request for Tag Aggregation
         if requested_tag == ALL_KEY:
-            self.build_index() # Ensure we have data
+            self.build_index() 
             return self.yaml_entries
 
         if requested_tag in GLOBAL_CACHE:
@@ -372,16 +370,14 @@ class TagLoader:
                 try:
                     data = yaml.safe_load(file)
                     
-                    # SYSTEM 1: Umi "Card" System
                     if self.is_umi_format(data):
-                        # Populate global index if not already (mostly handled by build_index now)
+                        # Populate global index if not already
                         for title, entry in data.items():
                             if isinstance(entry, dict):
                                 processed = self.process_yaml_entry(title, entry)
                                 if processed['tags']:
                                     self.yaml_entries[title.lower()] = processed
 
-                        # Return specific card if requested
                         if key_suffix:
                              for k, v in data.items():
                                  if k.lower() == key_suffix:
@@ -390,18 +386,15 @@ class TagLoader:
                                      return processed['prompts']
                         return []
 
-                    # SYSTEM 2: Standard "Folder" System (Hierarchical)
                     else:
                         flat_data = self.flatten_hierarchical_yaml(data)
                         if key_suffix:
-                            # Exact path match (case-insensitive)
                             for k, v in flat_data.items():
                                 if k.lower() == key_suffix:
                                     GLOBAL_CACHE[requested_tag] = v
                                     return v
                             return []
                         else:
-                            # Return all leaves if root file selected
                             all_values = []
                             for v in flat_data.values():
                                 all_values.extend(v)
@@ -417,7 +410,6 @@ class TagLoader:
         return fnmatch.filter(self.files_index, pattern)
 
     def get_entry_details(self, title):
-        # Fallback if entry is not in dict but index is built
         if title and title.lower() in self.yaml_entries:
             return self.yaml_entries[title.lower()]
         return self.yaml_entries.get(title)
@@ -430,6 +422,10 @@ class TagSelector:
         self.selected_options = options.get('selected_options', {})
         self.verbose = options.get('verbose', False)
         self.global_seed = options.get('seed', 0)
+        
+        # FIX: Use isolated RNG to prevent contaminating global random state
+        self.rng = random.Random(self.global_seed)
+        
         self.seeded_values = {}
         self.processing_stack = set()
         self.resolved_seeds = {}
@@ -464,11 +460,9 @@ class TagSelector:
         Evaluates a logic string (e.g. "red OR (blue AND NOT green)") 
         against a set/list of candidate tags.
         """
-        # 1. Pre-process Legacy Syntax
         clean_criteria = criteria_str.replace(',', ' AND ')
         clean_criteria = re.sub(r'(^|\s)--', r' NOT ', clean_criteria)
         
-        # 2. Tokenize logic
         ops = {'AND': 'and', 'OR': 'or', 'NOT': 'not', 'XOR': '!='}
         tokens = re.split(r'(\(|\)|\bAND\b|\bOR\b|\bNOT\b|\bXOR\b)', clean_criteria, flags=re.IGNORECASE)
         
@@ -485,7 +479,6 @@ class TagSelector:
             elif token in ('(', ')'):
                 expression.append(token)
             else:
-                # FIX: Explicit Variable Equality Check (e.g. $type=fire)
                 if '=' in token:
                     left, right = token.split('=', 1)
                     left = left.strip()
@@ -497,13 +490,11 @@ class TagSelector:
                     else:
                          expression.append(str(left.lower() == right.lower()))
                          
-                # Standard Variable Resolution (e.g. $type)
                 elif token.startswith('$') and token[1:] in self.variables:
                     token_val = str(self.variables[token[1:]])
                     exists = token_val.lower() in candidate_context
                     expression.append(str(exists))
                 
-                # Standard Text Search
                 else:
                     clean_token = token.replace('[','').replace(']','').strip()
                     exists = clean_token.lower() in candidate_context
@@ -511,13 +502,14 @@ class TagSelector:
 
         full_expression = " ".join(expression)
         try:
+            # Restricted eval for safety
             return eval(full_expression, {"__builtins__": None}, {})
         except Exception:
             return criteria_str.lower() in candidate_context
 
     def get_tag_choice(self, parsed_tag, tags):
         if isinstance(tags, list) and len(tags) > 0 and isinstance(tags[0], dict):
-            row = random.choice(tags)
+            row = self.rng.choice(tags)
             vars_out = []
             for k, v in row.items():
                 vars_out.append(f"${k.strip()}={v.strip()}")
@@ -529,14 +521,14 @@ class TagSelector:
         seed_match = re.match(r'#([0-9|]+)\$\$(.*)', parsed_tag)
         if seed_match:
             seed_options = seed_match.group(1).split('|')
-            chosen_seed = random.choice(seed_options)
+            chosen_seed = self.rng.choice(seed_options)
             
             if chosen_seed in self.seeded_values:
                 selected = self.seeded_values[chosen_seed]
                 return self.resolve_wildcard_recursively(selected, chosen_seed)
             
             unused = [t for t in tags if t not in self.used_values]
-            selected = random.choice(unused) if unused else random.choice(tags)
+            selected = self.rng.choice(unused) if unused else self.rng.choice(tags)
             
             self.seeded_values[chosen_seed] = selected
             self.used_values[selected] = True
@@ -547,7 +539,7 @@ class TagSelector:
             selected = tags[0]
         else:
             unused = [t for t in tags if t not in self.used_values]
-            selected = random.choice(unused) if unused else random.choice(tags)
+            selected = self.rng.choice(unused) if unused else self.rng.choice(tags)
 
         if selected:
             self.used_values[selected] = True
@@ -555,7 +547,7 @@ class TagSelector:
             if entry_details:
                 self.selected_entries[parsed_tag] = entry_details
                 if entry_details['prompts']:
-                    selected = random.choice(entry_details['prompts'])
+                    selected = self.rng.choice(entry_details['prompts'])
             if isinstance(selected, str) and '#' in selected:
                 selected = selected.split('#')[0].strip()
             selected = self.process_scoped_negative(selected)
@@ -582,26 +574,47 @@ class TagSelector:
             return resolved
         return value
 
-    def get_tag_group_choice(self, parsed_tag, criteria_str, tags):
+    def get_tag_group_choice(self, parsed_tag, groups, tags):
         if not isinstance(tags, dict):
             return ""
-        
+
+        resolved_groups = []
+        for g in groups:
+            clean_g = g.strip()
+            # Fix: Resolve variables inside tags (e.g. <[$char]> -> <[rin]>)
+            if clean_g.startswith('$') and clean_g[1:] in self.variables:
+                val = self.variables[clean_g[1:]]
+                resolved_groups.append(val)
+            else:
+                resolved_groups.append(clean_g)
+
+        neg_groups = {x.replace('--', '').strip().lower() for x in resolved_groups if x.startswith('--')}
+        pos_groups = {x.strip().lower() for x in resolved_groups if not x.startswith('--') and '|' not in x}
+        any_groups = [{y.strip() for y in x.lower().split('|')} for x in resolved_groups if '|' in x]
+
         candidates = []
         for title, entry_data in tags.items():
-            candidate_tags = []
             if isinstance(entry_data, dict):
-                candidate_tags = entry_data.get('tags', [])
+                tag_set = set(entry_data.get('tags', []))
             elif isinstance(entry_data, (list, set)):
-                candidate_tags = list(entry_data)
-            
-            if self.evaluate_criteria(criteria_str, candidate_tags):
-                candidates.append(title)
+                tag_set = set(entry_data)
+            else:
+                continue
+
+            if not pos_groups.issubset(tag_set):
+                continue
+            if not neg_groups.isdisjoint(tag_set):
+                continue
+            if any_groups:
+                if not all(not group.isdisjoint(tag_set) for group in any_groups):
+                    continue
+            candidates.append(title)
 
         if candidates:
             seed_match = re.match(r'#([0-9|]+)\$\$(.*)', parsed_tag)
             seed_id = seed_match.group(1) if seed_match else None
             
-            selected_title = random.choice(candidates)
+            selected_title = self.rng.choice(candidates)
             if seed_id and seed_id in self.seeded_values:
                 selected_title = self.seeded_values[seed_id]
             elif seed_id:
@@ -611,7 +624,7 @@ class TagSelector:
             if entry_details:
                 self.selected_entries[parsed_tag] = entry_details
                 if entry_details['prompts']:
-                    return self.resolve_wildcard_recursively(random.choice(entry_details['prompts']), seed_id)
+                    return self.resolve_wildcard_recursively(self.rng.choice(entry_details['prompts']), seed_id)
             return self.resolve_wildcard_recursively(selected_title, seed_id)
         return ""
 
@@ -627,7 +640,7 @@ class TagSelector:
         if '*' in parsed_tag or '?' in parsed_tag:
             matches = self.tag_loader.get_glob_matches(parsed_tag)
             if matches:
-                random.shuffle(matches)
+                self.rng.shuffle(matches)
                 for selected_key in matches:
                     result = self.select(selected_key, groups)
                     if result and str(result).strip():
@@ -644,7 +657,7 @@ class TagSelector:
             if any(c.isdigit() for c in range_part) or '-' in range_part:
                 tags = self.tag_loader.load_tags(file_part, self.verbose)
                 if isinstance(tags, list):
-                    return process_wildcard_range(parsed_tag, tags)
+                    return process_wildcard_range(parsed_tag, tags, self.rng)
 
         if parsed_tag.startswith('#'):
             tags = self.tag_loader.load_tags(parsed_tag.split('$$')[1], self.verbose)
@@ -698,6 +711,7 @@ class TagReplacer:
     def __init__(self, tag_selector):
         self.tag_selector = tag_selector
         self.wildcard_regex = re.compile(r'(__|<)(.*?)(__|>)')
+        self.opts_regexp = re.compile(r'(?<=\[)(.*?)(?=\])')
         self.clean_regex = re.compile(r'\[clean:(.*?)\]', re.IGNORECASE)
         self.shuffle_regex = re.compile(r'\[shuffle:(.*?)\]', re.IGNORECASE)
 
@@ -710,14 +724,15 @@ class TagReplacer:
         
         if ':' in match:
             scope, opts = match.split(':', 1)
-            if opts.strip():
-                 selected = self.tag_selector.select(scope, opts)
+            global_opts = self.opts_regexp.findall(opts)
+            if global_opts:
+                 selected = self.tag_selector.select(scope, global_opts)
             else:
                  selected = self.tag_selector.select(scope)
         else:
-            opts_regexp = re.findall(r'(?<=\[)(.*?)(?=\])', match)
-            if opts_regexp:
-                selected = self.tag_selector.select(ALL_KEY, ",".join(opts_regexp))
+            global_opts = self.opts_regexp.findall(match)
+            if global_opts:
+                selected = self.tag_selector.select(ALL_KEY, global_opts)
             else:
                 selected = self.tag_selector.select(match)
         
@@ -732,7 +747,7 @@ class TagReplacer:
         def _shuffle(match):
             content = match.group(1)
             items = [x.strip() for x in content.split(',')]
-            random.shuffle(items)
+            self.tag_selector.rng.shuffle(items)
             return ", ".join(items)
         
         def _clean(match):
@@ -760,6 +775,7 @@ class DynamicPromptReplacer:
     def __init__(self, seed):
         self.re_combinations = re.compile(r"\{([^{}]*)\}")
         self.seed = seed
+        self.rng = random.Random(seed)
 
     def replace_combinations(self, match):
         if not match:
@@ -781,10 +797,10 @@ class DynamicPromptReplacer:
             try:
                 chance = float(parts[0])
                 options = parts[1].split('|')
-                if random.random() * 100 < chance:
+                if self.rng.random() * 100 < chance:
                     return options[0]
                 elif len(options) > 1:
-                    return random.choice(options[1:])
+                    return self.rng.choice(options[1:])
                 else:
                     return ""
             except ValueError:
@@ -794,16 +810,16 @@ class DynamicPromptReplacer:
             range_str, variants_str = content.split('$$', 1)
             variants = [s.strip() for s in variants_str.split("|")]
             low, high = parse_wildcard_range(range_str, len(variants))
-            count = random.randint(low, high)
+            count = self.rng.randint(low, high)
             if count <= 0:
                 return ""
-            selected = random.sample(variants, min(count, len(variants)))
+            selected = self.rng.sample(variants, min(count, len(variants)))
             return ", ".join(selected)
 
         variants = [s.strip() for s in content.split("|")]
         if not variants:
             return ""
-        return random.choice(variants)
+        return self.rng.choice(variants)
 
     def replace(self, template):
         if not template:
@@ -833,7 +849,6 @@ class ConditionalReplacer:
             elif token in ('(', ')'):
                 expression.append(token)
             else:
-                # FIX: Handle Equality explicitly ($char=robot)
                 if '=' in token:
                     left, right = token.split('=', 1)
                     left = left.strip()
@@ -847,7 +862,6 @@ class ConditionalReplacer:
                     
                     expression.append(str(left_val == right.lower()))
                 
-                # FIX: Handle Boolean Variable Check ($is_robot)
                 elif token.startswith('$'):
                     var_name = token[1:]
                     val = variables.get(var_name, False)
@@ -864,7 +878,8 @@ class ConditionalReplacer:
         except:
             return False
 
-    def replace(self, prompt, variables):
+    def replace(self, prompt, variables=None):
+        if variables is None: variables = {}
         while True:
             match = self.regex.search(prompt)
             if not match: break
@@ -876,7 +891,6 @@ class ConditionalReplacer:
             
             context = prompt.replace(full_tag, "")
 
-            # FIX: Pass variables into logic engine
             if self.evaluate_logic(condition, context, variables):
                 replacement = true_text
             else:
@@ -887,8 +901,11 @@ class ConditionalReplacer:
 
 class VariableReplacer:
     def __init__(self):
-        # FIX: Updated Regex to be Multiline Anchored and more robust for values
+        # FIXED: Regex now uses MULTILINE and ^ anchor.
+        # This ensures it only matches assignments at the start of a line,
+        # preventing it from eating logic checks like [if $var=val:]
         self.assign_regex = re.compile(r'^\$([a-zA-Z0-9_]+)\s*=\s*(.*?)$', re.MULTILINE)
+        
         self.use_regex = re.compile(r'\$([a-zA-Z0-9_]+)((?:\.[a-zA-Z_]+)*)')
         self.variables = {}
 
@@ -898,7 +915,7 @@ class VariableReplacer:
     def store_variables(self, text, tag_replacer, dynamic_replacer):
         def _replace_assign(match):
             var_name = match.group(1)
-            raw_value = match.group(2).strip() # Strip whitespace from captured value
+            raw_value = match.group(2).strip()
             
             resolved_value = raw_value
             for _ in range(10): 
@@ -1018,7 +1035,9 @@ class DanbooruReplacer:
 
 class LoRAHandler:
     def __init__(self):
-        self.regex = re.compile(r'<lora:([^>:]+)(?::([0-9.]+))?>', re.IGNORECASE)
+        # FIXED: Greedy Regex. Matches <lora:ANYTHING>
+        # We parse the inside manually to be more robust against spaces/typos
+        self.regex = re.compile(r'<lora:([^>]+)>', re.IGNORECASE)
         self.blacklist = {
             "1girl", "1boy", "solo", "monochrome", "greyscale", "comic", "scenery",
             "translated", "commentary_request", "highres", "absurdres", "masterpiece",
@@ -1105,26 +1124,60 @@ class LoRAHandler:
         except Exception:
             return None
 
+    def load_lora_cached(self, lora_path):
+        """Simple cache to avoid re-reading safetensors from disk every run."""
+        if lora_path in LORA_MEMORY_CACHE:
+            return LORA_MEMORY_CACHE[lora_path]
+        
+        lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+        
+        # Memory Management
+        if len(LORA_MEMORY_CACHE) > MAX_LORA_CACHE_SIZE:
+            keys_to_remove = list(LORA_MEMORY_CACHE.keys())[:int(MAX_LORA_CACHE_SIZE/2)]
+            for k in keys_to_remove:
+                del LORA_MEMORY_CACHE[k]
+                
+        LORA_MEMORY_CACHE[lora_path] = lora
+        return lora
+
     def extract_and_load(self, text, model, clip, behavior):
+        # 1. Regex Extraction
         matches = self.regex.findall(text)
         clean_text = self.regex.sub("", text)
         lora_info_output = []
         extracted_tags_str = ""
 
+        # If no model is connected, we return the text stripped of tags
         if model is None or clip is None:
             return clean_text, model, clip, ""
 
-        for match in matches:
-            name = match[0].strip()
-            strength = float(match[1]) if match[1] else 1.0
+        for content in matches:
+            content = content.strip()
             
+            # 2. Python Manual Parsing (Robust)
+            if ':' in content:
+                # Split on last colon to handle names with colons safely
+                parts = content.rsplit(':', 1)
+                name = parts[0].strip()
+                try:
+                    strength = float(parts[1].strip())
+                except ValueError:
+                    # Fallback: Colon was part of filename, strength default 1.0
+                    name = content
+                    strength = 1.0
+            else:
+                name = content
+                strength = 1.0
+
+            # 3. Path Resolution (Native ComfyUI)
             lora_path = folder_paths.get_full_path("loras", name)
             if not lora_path:
                 lora_path = folder_paths.get_full_path("loras", f"{name}.safetensors")
             
+            # 4. Loading & Caching
             if lora_path:
                 tags = self.get_lora_tags(lora_path)
-                info_block = f"[LORA: {name}]\n"
+                info_block = f"[LORA: {name} (Str: {strength})]\n"
                 if tags:
                     info_block += f"Common Tags: {', '.join(tags)}"
                 else:
@@ -1137,7 +1190,9 @@ class LoRAHandler:
                      extracted_tags_str = ", ".join(tags) + ", " + extracted_tags_str
 
                 try:
-                    lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                    # Use Cached Loader
+                    lora = self.load_lora_cached(lora_path)
+                    
                     is_zimage = any(".attention.to_q." in k for k in lora.keys())
                     if is_zimage:
                         lora = self.patch_zimage_lora(lora)
@@ -1223,6 +1278,11 @@ class UmiAIWildcardNode:
     FUNCTION = "process"
     CATEGORY = "UmiAI"
     COLOR = "#322947"
+    
+    # ComfyUI best practice: this node depends on external files
+    # Returning the seed + text ensures it runs when params change
+    def IS_CHANGED(s, text, seed, **kwargs):
+        return f"{seed}_{text}"
 
     def extract_settings(self, text):
         settings_regex = re.compile(r'@@(.*?)@@')
@@ -1348,8 +1408,11 @@ class UmiAIWildcardNode:
         for line in protected_text.splitlines():
             if '//' in line:
                 line = line.split('//')[0]
-            if '#' in line:
-                line = line.split('#')[0]
+            if '#' in line and not line.strip().startswith("#"):
+                 # Only split if # is used as comment not as first char (e.g. #tag)
+                 if ' #' in line:
+                    line = line.split(' #')[0]
+            
             line = line.strip()
             if line:
                 clean_lines.append(line)
@@ -1357,7 +1420,7 @@ class UmiAIWildcardNode:
         text = "\n".join(clean_lines)
         text = text.replace('___UMI_HASH_PROTECT___', '#').replace('<___UMI_HASH_PROTECT___', '<#')
 
-        random.seed(seed)
+        # FIXED: DO NOT set global random seed.
         
         options = {
             'verbose': False, 
@@ -1365,10 +1428,10 @@ class UmiAIWildcardNode:
             'ignore_paths': True
         }
 
-        # Fix: Get all paths instead of just the internal one
         all_wildcard_paths = get_all_wildcard_paths()
         tag_loader = TagLoader(all_wildcard_paths, options)
         
+        # Initialize Core classes (Selector now handles its own private RNG based on seed)
         tag_selector = TagSelector(tag_loader, options)
         neg_gen = NegativePromptGenerator()
         
@@ -1397,7 +1460,7 @@ class UmiAIWildcardNode:
             prompt = danbooru_replacer.replace(prompt, danbooru_threshold, danbooru_max_tags)
             iterations += 1
             
-        # FIX: PASS VARIABLES TO CONDITIONAL REPLACER
+        # FIX: Pass variables to conditional replacer
         prompt = conditional_replacer.replace(prompt, variable_replacer.variables)
         
         additions = tag_selector.get_prefixes_and_suffixes()
@@ -1424,6 +1487,7 @@ class UmiAIWildcardNode:
             naturalized_text = self.run_llm_naturalizer(clean_for_llm, llm_model, llm_temperature, llm_max_tokens, custom_system_prompt)
             prompt = naturalized_text + " " + " ".join(lora_tags)
 
+        # Process LoRAs (now with Caching)
         prompt, final_model, final_clip, lora_info = lora_handler.extract_and_load(prompt, model, clip, lora_tags_behavior)
 
         generated_negatives = neg_gen.get_negative_string()
@@ -1470,7 +1534,7 @@ async def refresh_wildcards(request):
     """Refreshes the global cache and returns the new list."""
     GLOBAL_CACHE.clear()
     
-    # Fix: Nuke the Index Cache so it rebuilds next time
+    # Reset Index Cache so it rebuilds
     GLOBAL_INDEX['built'] = False 
     GLOBAL_INDEX['files'] = set()
     GLOBAL_INDEX['entries'] = {}
@@ -1478,7 +1542,7 @@ async def refresh_wildcards(request):
     all_paths = get_all_wildcard_paths()
     options = {'ignore_paths': True, 'verbose': False}
     loader = TagLoader(all_paths, options)
-    loader.build_index() # Rebuild immediately
+    loader.build_index() 
     
     wildcards = sorted(list(loader.files_index))
     loras = folder_paths.get_filename_list("loras")
