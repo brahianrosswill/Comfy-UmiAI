@@ -106,7 +106,7 @@ UmiAI uses a **Two-Stage Pipeline** to generate prompts. You can use just one st
 | **Load LoRA** | `<lora:name:str>` | `<lora:pixel_art:0.8>` |
 | **Random Choice** | `{a\|b\|c}` | `{Red\|Blue\|Green}` |
 | **Logic (Prompt)** | `[if Logic : True \| False]` | `[if red AND blue : Purple \| Grey]` |
-| **Logic (Wildcard)**| `__[Logic]__` | `__[fire OR (ice AND magic)]__` |
+| **Wildcar)**| `__Wildcard__` 
 | **Variables** | `$var={opts}` | `$hair={Red\|Blue}` |
 | **Use Variable** | `$var` | `She has $hair hair` |
 | **Danbooru** | `char:name` | `char:tifa_lockhart` |

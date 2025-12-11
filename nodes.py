@@ -1016,7 +1016,10 @@ class ConditionalReplacer:
                     expression.append(str(is_true))
                     
                 else:
-                    exists = token.lower() in context.lower()
+                    # FIX 1: Use regex word boundaries (\b) to prevent partial matching 
+                    # (e.g., preventing "fruit" from matching inside "fruitless")
+                    pattern = r'\b' + re.escape(token.lower()) + r'\b'
+                    exists = re.search(pattern, context.lower()) is not None
                     expression.append(str(exists))
         
         try:
@@ -1035,7 +1038,10 @@ class ConditionalReplacer:
             true_text = match.group(2)
             false_text = match.group(3) if match.group(3) else ""
             
-            context = prompt.replace(full_tag, "")
+            # FIX 2: Clean the context by removing ALL conditional tags.
+            # This prevents a condition from finding its keyword inside the 
+            # syntax of other unprocessed tags in the prompt.
+            context = self.regex.sub("", prompt)
 
             if self.evaluate_logic(condition, context, variables):
                 replacement = true_text
